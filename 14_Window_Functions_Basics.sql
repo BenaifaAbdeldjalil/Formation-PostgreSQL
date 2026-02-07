@@ -69,8 +69,7 @@ FROM  Orders;
    FONCTIONS FENÊTRE SQL | CLAUSE PARTITION
 ===============================================================================*/
 
-/* TÂCHE 4 : 
-   Calculer le chiffre d'affaires total global et par produit
+/* Calculer le chiffre d'affaires total global et par produit
    La clause PARTITION BY ProductID divise les données par produit
    et applique SUM séparément pour chaque produit
 */
@@ -82,9 +81,10 @@ SELECT
     SUM(Sales) OVER () AS Total_Sales,
     SUM(Sales) OVER (PARTITION BY ProductID) AS Sales_By_Product
 FROM  Orders;
+---101
 
-/* TÂCHE 5 : 
-   Calculer le chiffre d'affaires global, par produit et par combinaison produit/statut
+
+/* Calculer le chiffre d'affaires global, par produit et par combinaison produit/statut
    (OrderStatus)
    Cela montre comment partitionner sur plusieurs colonnes pour obtenir des sous-totaux
 */
@@ -98,13 +98,13 @@ SELECT
     SUM(Sales) OVER (PARTITION BY ProductID) AS Sales_By_Product,
     SUM(Sales) OVER (PARTITION BY ProductID, OrderStatus) AS Sales_By_Product_Status
 FROM  Orders;
+---104
 
 /* ==============================================================================
    FONCTIONS FENÊTRE SQL | CLAUSE ORDER
 ===============================================================================*/
 
-/* TÂCHE 6 : 
-   Classer chaque commande selon le chiffre d'affaires (du plus élevé au plus bas)
+/* Classer chaque commande selon le chiffre d'affaires (du plus élevé au plus bas)
    La fonction RANK() avec ORDER BY permet de donner un rang à chaque ligne
 */
 SELECT
@@ -113,13 +113,27 @@ SELECT
     Sales,
     RANK() OVER (ORDER BY Sales DESC) AS Rank_Sales
 FROM  Orders;
+------
+SELECT
+    OrderID,
+    OrderDate,
+    Sales,
+    RANK() OVER (ORDER BY ProductID DESC) AS Rank_Sales
+FROM  Orders;
+----
+SELECT
+    OrderID,
+    ProductID,
+    OrderDate,
+    Sales,
+    RANK() OVER (PARTITION by ProductID,OrderDate ORDER BY ProductID,OrderDate DESC) AS Rank_Sales
+FROM  Orders;
 
 /* ==============================================================================
    FONCTIONS FENÊTRE SQL | CLAUSE FRAME
 ===============================================================================*/
 
-/* TÂCHE 7 : 
-   Calculer le chiffre d'affaires total par statut de commande
+/* Calculer le chiffre d'affaires total par statut de commande
    pour la commande courante et les deux commandes suivantes
    La clause ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING définit la fenêtre
 */
@@ -132,12 +146,11 @@ SELECT
     SUM(Sales) OVER (
         PARTITION BY OrderStatus 
         ORDER BY OrderDate 
-        ROWS BETWEEN CURRENT ROW AND 2 FOLLOWING
+        ROWS BETWEEN CURRENT ROW AND 1 FOLLOWING
     ) AS Total_Sales
 FROM  Orders;
 
-/* TÂCHE 8 : 
-   Calculer le chiffre d'affaires total par statut pour la commande courante
+/* Calculer le chiffre d'affaires total par statut pour la commande courante
    et les deux commandes précédentes
 */
 SELECT
@@ -149,29 +162,13 @@ SELECT
     SUM(Sales) OVER (
         PARTITION BY OrderStatus 
         ORDER BY OrderDate 
-        ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+        ROWS BETWEEN 1 PRECEDING AND CURRENT ROW
     ) AS Total_Sales
 FROM  Orders;
 
-/* TÂCHE 9 : 
-   Calculer le chiffre d'affaires total par statut en ne considérant que
-   les deux commandes précédentes
-*/
-SELECT
-    OrderID,
-    OrderDate,
-    ProductID,
-    OrderStatus,
-    Sales,
-    SUM(Sales) OVER (
-        PARTITION BY OrderStatus 
-        ORDER BY OrderDate 
-        ROWS 2 PRECEDING
-    ) AS Total_Sales
-FROM  Orders;
 
-/* TÂCHE 10 : 
-   Calculer le chiffre d'affaires cumulatif par statut de commande jusqu'à
+
+/*    Calculer le chiffre d'affaires cumulatif par statut de commande jusqu'à
    la commande courante
 */
 SELECT
@@ -187,8 +184,7 @@ SELECT
     ) AS Total_Sales
 FROM  Orders;
 
-/* TÂCHE 11 : 
-   Variante simplifiée : chiffre d'affaires cumulatif par statut depuis
+/* Variante simplifiée : chiffre d'affaires cumulatif par statut depuis
    le début jusqu'à la ligne courante
 */
 SELECT
@@ -235,17 +231,4 @@ SELECT
     SUM(SUM(Sales) OVER (PARTITION BY OrderStatus)) OVER (PARTITION BY OrderStatus) AS Total_Sales  -- ❌ Invalide
 FROM  Orders;
 
-/* ==============================================================================
-   FONCTIONS FENÊTRE SQL | UTILISATION AVEC GROUP BY
-===============================================================================*/
 
-/* TÂCHE 12 : 
-   Classer les clients selon leur chiffre d'affaires total
-   GROUP BY calcule le total par client, puis RANK() classe les clients
-*/
-SELECT
-    CustomerID,
-    SUM(Sales) AS Total_Sales,
-    RANK() OVER (ORDER BY SUM(Sales) DESC) AS Rank_Customers
-FROM  Orders
-GROUP BY CustomerID;
