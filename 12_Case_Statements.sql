@@ -1,30 +1,26 @@
-/* ==============================================================================
-   SQL CASE Statement
--------------------------------------------------------------------------------
-   This script demonstrates various use cases of the SQL CASE statement, including
-   data categorization, mapping, quick form syntax, handling nulls, and conditional 
-   aggregation.
-   
-   Table of Contents:
-     1. Categorize Data
-     2. Mapping
-     3. Quick Form of Case Statement
-     4. Handling Nulls
-     5. Conditional Aggregation
-=================================================================================
-*/
 
 /* ==============================================================================
    USE CASE: CATEGORIZE DATA
 ===============================================================================*/
 
-/* TASK 1: 
-   Create a report showing total sales for each category:
+/*Create a report showing total sales for each category:
 	   - High: Sales over 50
 	   - Medium: Sales between 20 and 50
 	   - Low: Sales 20 or less
-   The results are sorted from highest to lowest total sales.
 */
+select * from Orders;
+
+SELECT
+        OrderID,
+        Sales,
+        CASE
+            WHEN Sales > 50 THEN 'High'
+            WHEN Sales > 20 THEN 'Medium'
+            ELSE 'Low'
+        END AS Category
+    FROM  Orders
+    
+-----
 SELECT
     Category,
     SUM(Sales) AS TotalSales
@@ -37,7 +33,7 @@ FROM (
             WHEN Sales > 20 THEN 'Medium'
             ELSE 'Low'
         END AS Category
-    FROM Sales.Orders
+    FROM  Orders
 ) AS t
 GROUP BY Category
 ORDER BY TotalSales DESC;
@@ -58,8 +54,8 @@ SELECT
         WHEN Country = 'Germany' THEN 'DE'
         WHEN Country = 'USA'     THEN 'US'
         ELSE 'n/a'
-    END AS CountryAbbr
-FROM Sales.Customers;
+    END AS CountryCode
+FROM  Customers;
 
 /* ==============================================================================
    QUICK FORM SYNTAX
@@ -77,13 +73,13 @@ SELECT
         WHEN Country = 'Germany' THEN 'DE'
         WHEN Country = 'USA'     THEN 'US'
         ELSE 'n/a'
-    END AS CountryAbbr,
+    END AS Countrycountry,
     CASE Country
         WHEN 'Germany' THEN 'DE'
         WHEN 'USA'     THEN 'US'
         ELSE 'n/a'
-    END AS CountryAbbr2
-FROM Sales.Customers;
+    END AS Countrycountry_2
+FROM  Customers;
 
 /* ==============================================================================
    HANDLING NULLS
@@ -108,7 +104,7 @@ SELECT
         END
     ) OVER () AS AvgCustomerClean,
     AVG(Score) OVER () AS AvgCustomer
-FROM Sales.Customers;
+FROM  Customers;
 
 /* ==============================================================================
    CONDITIONAL AGGREGATION
@@ -119,12 +115,47 @@ FROM Sales.Customers;
 */
 SELECT
     CustomerID,
+    sales,
+    CASE
+            WHEN sales > 30 THEN 1
+            ELSE 0
+        end as grop_orrder,
     SUM(
         CASE
-            WHEN Sales > 30 THEN 1
+            WHEN sales > 30 THEN 1
             ELSE 0
         END
     ) AS TotalOrdersHighSales,
     COUNT(*) AS TotalOrders
-FROM Sales.Orders
+FROM  Orders
+GROUP BY CustomerID,grop_orrder,sales;
+
+
+------------------
+SELECT
+    CustomerID,
+    SUM(
+        CASE
+            WHEN sales > 30 THEN 1
+            ELSE 0
+        END
+    ) AS TotalOrdersHighSales,
+    COUNT(*) AS TotalOrders
+FROM  Orders
 GROUP BY CustomerID;
+
+-------------------------
+SELECT
+    CASE
+            WHEN sales > 30 THEN 1
+            ELSE 0
+        end as grop_orrder,
+    SUM(
+        CASE
+            WHEN sales > 30 THEN 1
+            ELSE 0
+        END
+    ) AS TotalOrdersHighSales,
+    COUNT(*) AS TotalOrders
+FROM  Orders
+GROUP BY grop_orrder;
