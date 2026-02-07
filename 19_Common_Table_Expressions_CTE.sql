@@ -1,62 +1,83 @@
 /* ==============================================================================
-   SQL Common Table Expressions (CTEs)
+   Expressions de Table Communes (CTE – Common Table Expressions)
 -------------------------------------------------------------------------------
-   This script demonstrates the use of Common Table Expressions (CTEs) in SQL Server.
-   It includes examples of non-recursive CTEs for data aggregation and segmentation,
-   as well as recursive CTEs for generating sequences and building hierarchical data.
+   Ce script illustre l’utilisation des CTE en SQL.
 
-   Table of Contents:
-     1. NON-RECURSIVE CTE
-     2. RECURSIVE CTE | GENERATE SEQUENCE
-     3. RECURSIVE CTE | BUILD HIERARCHY
+   Les CTE permettent de définir des requêtes temporaires nommées,
+   utilisables uniquement dans la requête principale qui suit.
+   Elles améliorent fortement la lisibilité, la structuration et
+   la maintenance des requêtes SQL complexes.
+
+   Ce script présente :
+   - des CTE non récursives pour l’agrégation, le classement et la segmentation
+   - des CTE récursives pour générer des séquences
+   - des CTE récursives pour construire des hiérarchies
+
+   Sommaire :
+     1. CTE NON RÉCURSIVES
+     2. CTE RÉCURSIVES | GÉNÉRATION DE SÉQUENCE
+     3. CTE RÉCURSIVES | CONSTRUCTION D’UNE HIÉRARCHIE
+     4. COMPARAISON : CTE vs SOUS-REQUÊTES
 ===============================================================================
+*/
 
 /* ==============================================================================
-   NON-RECURSIVE CTE
+   CTE NON RÉCURSIVES
 ===============================================================================*/
 
-
--- Step1: Find the total Sales Per Customer (Standalone CTE)
-WITH CTE_Total_Sales AS
-(
+/* Étape 1 :
+   Calculer le chiffre d’affaires total par client
+   (CTE indépendante)
+*/
+WITH CTE_Total_Sales AS (
     SELECT
         CustomerID,
         SUM(Sales) AS TotalSales
-    FROM Sales.Orders
+    FROM   Orders
     GROUP BY CustomerID
-)
--- Step2: Find the last order date for each customer (Standalone CTE)
-, CTE_Last_Order AS
-(
+),
+
+/* Étape 2 :
+   Trouver la date de la dernière commande pour chaque client
+   (CTE indépendante)
+*/
+CTE_Last_Order AS (
     SELECT
         CustomerID,
         MAX(OrderDate) AS Last_Order
-    FROM Sales.Orders
+    FROM   Orders
     GROUP BY CustomerID
-)
--- Step3: Rank Customers based on Total Sales Per Customer (Nested CTE)
-, CTE_Customer_Rank AS
-(
+),
+
+/* Étape 3 :
+   Classer les clients selon leur chiffre d’affaires total
+   (CTE imbriquée basée sur une CTE précédente)
+*/
+CTE_Customer_Rank AS (
     SELECT
         CustomerID,
         TotalSales,
         RANK() OVER (ORDER BY TotalSales DESC) AS CustomerRank
     FROM CTE_Total_Sales
-)
--- Step4: segment customers based on their total sales (Nested CTE)
-, CTE_Customer_Segments AS
-(
+),
+
+/* Étape 4 :
+   Segmenter les clients selon leur niveau de ventes
+   (logique métier intégrée dans une CTE)
+*/
+CTE_Customer_Segments AS (
     SELECT
         CustomerID,
         TotalSales,
-        CASE 
+        CASE
             WHEN TotalSales > 100 THEN 'High'
             WHEN TotalSales > 80  THEN 'Medium'
             ELSE 'Low'
         END AS CustomerSegments
     FROM CTE_Total_Sales
 )
--- Main Query
+
+-- Requête principale : combinaison de toutes les CTE
 SELECT
     c.CustomerID,
     c.FirstName,
@@ -65,84 +86,107 @@ SELECT
     clo.Last_Order,
     ccr.CustomerRank,
     ccs.CustomerSegments
-FROM Sales.Customers AS c
+FROM   Customers AS c
 LEFT JOIN CTE_Total_Sales AS cts
-    ON cts.CustomerID = c.CustomerID
+    ON c.CustomerID = cts.CustomerID
 LEFT JOIN CTE_Last_Order AS clo
-    ON clo.CustomerID = c.CustomerID
+    ON c.CustomerID = clo.CustomerID
 LEFT JOIN CTE_Customer_Rank AS ccr
-    ON ccr.CustomerID = c.CustomerID
+    ON c.CustomerID = ccr.CustomerID
 LEFT JOIN CTE_Customer_Segments AS ccs
-    ON ccs.CustomerID = c.CustomerID;
+    ON c.CustomerID = ccs.CustomerID;
 
 /* ==============================================================================
-   RECURSIVE CTE | GENERATE SEQUENCE
+   CTE RÉCURSIVES | GÉNÉRATION DE SÉQUENCE
 ===============================================================================*/
 
-/* TASK 2:
-   Generate a sequence of numbers from 1 to 20.
+/*   ----------- 2 :
+   Générer une suite de nombres de 1 à 20
 */
-WITH Series AS (
-    -- Anchor Query
+WITH RECURSIVE Series AS (
+    -- Requête d’ancrage : point de départ
     SELECT 1 AS MyNumber
     UNION ALL
-    -- Recursive Query
+    -- Requête récursive : incrémentation
     SELECT MyNumber + 1
     FROM Series
     WHERE MyNumber < 20
 )
--- Main Query
 SELECT *
-FROM Series
+FROM Series;
 
-/* TASK 3:
-   Generate a sequence of numbers from 1 to 1000.
+/*   ----------- 3 :
+   Générer une suite de nombres de 1 à 1000
 */
-WITH Series AS
-(
-    -- Anchor Query
+WITH RECURSIVE Series AS (
     SELECT 1 AS MyNumber
     UNION ALL
-    -- Recursive Query
     SELECT MyNumber + 1
     FROM Series
     WHERE MyNumber < 1000
 )
--- Main Query
 SELECT *
-FROM Series
-OPTION (MAXRECURSION 5000);
+FROM Series;
 
 /* ==============================================================================
-   RECURSIVE CTE | BUILD HIERARCHY
+   CTE RÉCURSIVES | CONSTRUCTION D’UNE HIÉRARCHIE
 ===============================================================================*/
 
-/* TASK 4:
-   Build the employee hierarchy by displaying each employee's level within the organization.
-   - Anchor Query: Select employees with no manager.
-   - Recursive Query: Select subordinates and increment the level.
+/*   ----------- 4 :
+   Construire la hiérarchie des employés en indiquant leur niveau
+   - Requête d’ancrage : employés sans manager
+   - Requête récursive : rattachement des subordonnés
 */
-WITH CTE_Emp_Hierarchy AS
-(
-    -- Anchor Query: Top-level employees (no manager)
+WITH RECURSIVE CTE_Emp_Hierarchy AS (
+    -- Niveau supérieur (sans manager)
     SELECT
         EmployeeID,
         FirstName,
         ManagerID,
         1 AS Level
-    FROM Sales.Employees
+    FROM   Employees
     WHERE ManagerID IS NULL
+
     UNION ALL
-    -- Recursive Query: Get subordinate employees and increment level
+
+    -- Niveaux inférieurs
     SELECT
         e.EmployeeID,
         e.FirstName,
         e.ManagerID,
-        Level + 1
-    FROM Sales.Employees AS e
+        ceh.Level + 1
+    FROM   Employees AS e
     INNER JOIN CTE_Emp_Hierarchy AS ceh
         ON e.ManagerID = ceh.EmployeeID
 )
--- Main Query
 SELECT *
 FROM CTE_Emp_Hierarchy;
+
+/* ==============================================================================
+   COMPARAISON : CTE vs SOUS-REQUÊTES
+===============================================================================*/
+
+/*
+CTE (WITH)
+---------
+✔ Améliore fortement la lisibilité
+✔ Permet de découper une requête complexe en étapes claires
+✔ Supporte la récursivité (hiérarchies, séquences)
+✔ Idéal pour les analyses, le reporting et la pédagogie
+✘ Non réutilisable en dehors de la requête
+✘ Temporaire (non persisté)
+
+Sous-requêtes
+-------------
+✔ Simples et efficaces pour des calculs ponctuels
+✔ Pas besoin de structure supplémentaire
+✔ Souvent très performantes pour des cas simples
+✘ Peu lisibles lorsqu’elles sont imbriquées
+✘ Difficiles à maintenir sur des requêtes complexes
+✘ Ne supportent pas la récursivité
+
+Règle pratique :
+---------------
+- Logique complexe ou multi-étapes → CTE
+- Calcul simple et ponctuel        → Sous-requête
+*/
