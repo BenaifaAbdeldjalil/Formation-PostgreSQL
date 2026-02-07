@@ -1,11 +1,12 @@
 /* ==============================================================================
-   SQL Window Value Functions
+   FONCTIONS DE VALEUR FENÊTRE SQL (SQL Window Value Functions)
 -------------------------------------------------------------------------------
-   These functions let you reference and compare values from other rows 
-   in a result set without complex joins or subqueries, enabling advanced 
-   analysis on ordered data.
+   Ces fonctions permettent de référencer et comparer les valeurs d’autres lignes
+   dans un jeu de résultats, sans utiliser de jointures ou sous-requêtes complexes.
+   Elles sont idéales pour l’analyse temporelle et les comparaisons entre lignes
+   ordonnées.
 
-   Table of Contents:
+   Table des matières :
      1. LEAD
      2. LAG
      3. FIRST_VALUE
@@ -14,70 +15,74 @@
 */
 
 /* ============================================================
-   SQL WINDOW VALUE | LEAD, LAG
-   ============================================================ */
+   FONCTIONS VALEUR FENÊTRE | LEAD, LAG
+============================================================ */
 
-/* TASK 1:
-   Analyze the Month-over-Month Performance by Finding the Percentage Change in Sales
-   Between the Current and Previous Months
+/* TÂCHE 1 :
+   Analyse Mois par Mois (Month-over-Month)
+   Calculer l’évolution des ventes entre le mois courant et le mois précédent
+   - LAG permet de récupérer les ventes du mois précédent
+   - On calcule ensuite la variation absolue et le pourcentage d’évolution
 */
 
-SELECT
-    *,
-    CurrentMonthSales - PreviousMonthSales AS MoM_Change,
-    ROUND(
-        CAST((CurrentMonthSales - PreviousMonthSales) AS FLOAT)
-        / PreviousMonthSales * 100, 1
-    ) AS MoM_Perc
-FROM (
     SELECT
-        MONTH(OrderDate) AS OrderMonth,
-        SUM(Sales) AS CurrentMonthSales,
-        LAG(SUM(Sales)) OVER (ORDER BY MONTH(OrderDate)) AS PreviousMonthSales
-    FROM Sales.Orders
-    GROUP BY MONTH(OrderDate)
-) AS MonthlySales;
+        DATE_TRUNC('month', orderdate) AS order_month,
+        SUM(sales) AS current_month_sales,
+        LAG(SUM(sales)) OVER (
+            ORDER BY DATE_TRUNC('month', orderdate)
+        ) AS previous_month_sales
+    FROM  Orders
+    GROUP BY DATE_TRUNC('month', orderdate)
 
-
-/* TASK 2:
-   Customer Loyalty Analysis - Rank Customers Based on the Average Days Between Their Orders
-*/
-SELECT
-    CustomerID,
-    AVG(DaysUntilNextOrder) AS AvgDays,
-    RANK() OVER (ORDER BY COALESCE(AVG(DaysUntilNextOrder), 999999)) AS RankAvg
-FROM (
-    SELECT
-        OrderID,
-        CustomerID,
-        OrderDate AS CurrentOrder,
-        LEAD(OrderDate) OVER (PARTITION BY CustomerID ORDER BY OrderDate) AS NextOrder,
-        DATEDIFF(
-            day,
-            OrderDate,
-            LEAD(OrderDate) OVER (PARTITION BY CustomerID ORDER BY OrderDate)
-        ) AS DaysUntilNextOrder
-    FROM Sales.Orders
-) AS CustomerOrdersWithNext
-GROUP BY CustomerID;
 
 /* ============================================================
-   SQL WINDOW VALUE | FIRST & LAST VALUE
-   ============================================================ */
+   CAS PRATIQUE | ANALYSE DE FIDÉLITÉ CLIENT
+============================================================ */
 
-/* TASK 3:
-   Find the Lowest and Highest Sales for Each Product,
-   and determine the difference between the current Sales and the lowest Sales for each Product.
+/*   Analyse de la fidélité client
+   Classer les clients selon le nombre moyen de jours entre leurs commandes
+   - LEAD récupère la date de la commande suivante
+   - La différence de dates donne le délai entre deux commandes
+   - Plus le délai est court, plus le client est fidèle
 */
+SELECT
+        OrderID,
+        CustomerID,
+        OrderDate AS current_order_date,
+        LEAD(OrderDate) OVER (
+            PARTITION BY CustomerID
+            ORDER BY OrderDate
+        ) AS next_order_date
+    FROM  Orders
+
+
+/* ============================================================
+   FONCTIONS VALEUR FENÊTRE | FIRST_VALUE & LAST_VALUE
+============================================================ */
+
+/*    Trouver la vente minimale et maximale pour chaque produit
+   et calculer l’écart entre la vente courante et la vente minimale
+
+   - FIRST_VALUE : première valeur dans la fenêtre (vente la plus basse)
+   - LAST_VALUE : dernière valeur dans la fenêtre (vente la plus élevée)
+   ⚠️ LAST_VALUE nécessite une clause FRAME explicite en PostgreSQL
+*/
+
 SELECT
     OrderID,
     ProductID,
     Sales,
-    FIRST_VALUE(Sales) OVER (PARTITION BY ProductID ORDER BY Sales) AS LowestSales,
+    FIRST_VALUE(Sales) OVER (
+        PARTITION BY ProductID
+        ORDER BY Sales
+    ) AS lowest_sales,
     LAST_VALUE(Sales) OVER (
-        PARTITION BY ProductID 
-        ORDER BY Sales 
+        PARTITION BY ProductID
+        ORDER BY Sales
         ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
-    ) AS HighestSales,
-    Sales - FIRST_VALUE(Sales) OVER (PARTITION BY ProductID ORDER BY Sales) AS SalesDifference
-FROM Sales.Orders;
+    ) AS highest_sales,
+    Sales - FIRST_VALUE(Sales) OVER (
+        PARTITION BY ProductID
+        ORDER BY Sales
+    ) AS sales_difference_from_min
+FROM  Orders;
