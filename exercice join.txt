@@ -1,0 +1,107 @@
+-- Affiche toutes les colonnes et toutes les lignes de la table client
+SELECT * 
+FROM client;
+
+-- Affiche toutes les données de la table evenement
+SELECT * 
+FROM evenement;
+
+-- Affiche toutes les données de la table action
+SELECT * 
+FROM action;
+
+-- Affiche toutes les données de la table evenement_v2
+SELECT * 
+FROM evenement_v2;
+
+
+/* ------------------------------------------------------------------------------ 
+   INNER JOIN
+les clients qui ont au moins un événement
+------------------------------------------------------------------------------- */
+
+SELECT *
+FROM client
+INNER JOIN evenement
+-- La jointure se fait lorsque les client_id sont identiques
+ON client.client_id = evenement.client_id;
+
+
+SELECT *
+FROM client
+JOIN evenement
+-- La jointure se fait lorsque les client_id sont identiques
+ON client.client_id = evenement.client_id; 
+
+/* ------------------------------------------------------------------------------ 
+   LEFT JOIN
+- Tous les clients sont affichés
+- Si un client n’a pas d’événement, les colonnes de evenement valent NULL
+------------------------------------------------------------------------------- */
+
+SELECT *
+FROM client
+LEFT JOIN evenement
+ON client.client_id = evenement.client_id;
+
+/* ------------------------------------------------------------------------------ 
+   RIGHT JOIN
+- Tous les événements sont affichés
+- Si un événement n’a pas de client associé, les colonnes de client valent NULL
+------------------------------------------------------------------------------- */
+
+SELECT *
+FROM client
+RIGHT JOIN evenement
+ON client.client_id = evenement.client_id;
+
+
+-------meme chose ---------
+SELECT * 
+FROM evenement
+Left JOIN client
+ON client.client_id = evenement.client_id;
+
+/* ------------------------------------------------------------------------------ 
+   FULL JOIN
+   → Combine LEFT JOIN et RIGHT JOIN
+- Tous les clients
+- Tous les événements
+- Les valeurs manquantes sont remplacées par NULL
+------------------------------------------------------------------------------- */
+
+SELECT *
+FROM client
+FULL JOIN evenement
+ON client.client_id = evenement.client_id;
+
+/* ------------------------------------------------------------------------------ 
+   CROSS JOIN
+   → Produit cartésien
+- Si client a 10 lignes et evenement en a 5
+- Le résultat contiendra 50 lignes (10 x 5)
+------------------------------------------------------------------------------- */
+
+SELECT *
+FROM client
+CROSS JOIN evenement;
+
+/* ------------------------------------------------------------------------------ 
+   JOIN de 3 tables
+------------------------------------------------------------------------------- */
+/*
+- Toutes les actions sont affichées
+- Les événements liés à une action sont ajoutés
+- Les clients liés aux événements sont ajoutés
+- Si une action n’a pas d’événement ou de client, les champs correspondants sont null */
+
+
+SELECT *
+FROM action
+LEFT JOIN evenement_v2
+-- On relie action et evenement_v2 via action_id
+ON evenement_v2.action_id = action.action_id
+LEFT JOIN client
+-- On relie ensuite evenement_v2 à client via client_id
+ON client.client_id = evenement_v2.client_id;
+
