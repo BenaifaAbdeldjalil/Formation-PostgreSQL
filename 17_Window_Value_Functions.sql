@@ -28,9 +28,7 @@
     SELECT
         DATE_TRUNC('month', orderdate) AS order_month,
         SUM(sales) AS current_month_sales,
-        LAG(SUM(sales)) OVER (
-            ORDER BY DATE_TRUNC('month', orderdate)
-        ) AS previous_month_sales
+        LAG(SUM(sales)) OVER ( ORDER BY DATE_TRUNC('month', orderdate) ) AS previous_month_sales
     FROM  Orders
     GROUP BY DATE_TRUNC('month', orderdate)
 
@@ -49,10 +47,7 @@ SELECT
         OrderID,
         CustomerID,
         OrderDate AS current_order_date,
-        LEAD(OrderDate) OVER (
-            PARTITION BY CustomerID
-            ORDER BY OrderDate
-        ) AS next_order_date
+        LEAD(OrderDate) OVER ( PARTITION BY CustomerID ORDER BY OrderDate ) AS next_order_date
     FROM  Orders
 
 
@@ -72,17 +67,6 @@ SELECT
     OrderID,
     ProductID,
     Sales,
-    FIRST_VALUE(Sales) OVER (
-        PARTITION BY ProductID
-        ORDER BY Sales
-    ) AS lowest_sales,
-    LAST_VALUE(Sales) OVER (
-        PARTITION BY ProductID
-        ORDER BY Sales
-        ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING
-    ) AS highest_sales,
-    Sales - FIRST_VALUE(Sales) OVER (
-        PARTITION BY ProductID
-        ORDER BY Sales
-    ) AS sales_difference_from_min
+    FIRST_VALUE(Sales) OVER ( PARTITION BY ProductID ORDER BY Sales ) AS lowest_sales,
+    LAST_VALUE(Sales) OVER ( PARTITION BY ProductID ORDER BY Sales ROWS BETWEEN CURRENT ROW AND UNBOUNDED following ) AS highest_sales,
 FROM  Orders;
