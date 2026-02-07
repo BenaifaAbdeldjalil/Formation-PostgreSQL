@@ -1,122 +1,135 @@
 /* ==============================================================================
    SQL NULL Functions
--------------------------------------------------------------------------------
-   This script highlights essential SQL functions for managing NULL values.
-   It demonstrates how to handle NULLs in data aggregation, mathematical operations,
-   sorting, and comparisons. These techniques help maintain data integrity 
-   and ensure accurate query results.
-
-   Table of Contents:
-     1. Handle NULL - Data Aggregation
-     2. Handle NULL - Mathematical Operators
-     3. Handle NULL - Sorting Data
-     4. NULLIF - Division by Zero
-     5. IS NULL - IS NOT NULL
-     6. LEFT ANTI JOIN
-     7. NULLs vs Empty String vs Blank Spaces
+   1. is null/is not null
 ===============================================================================
 */
+select * FROM formation_sql.customers;
+
+------ les nulls
+SELECT
+    FirstName,
+    LastName
+FROM formation_sql.customers
+where LastName = 'null';
+
+/*
+SELECT
+    FirstName,
+    LastName
+FROM formation_sql.customers
+where FirstName is null;*/
+
+------ les non nulls
+SELECT
+    FirstName,
+    LastName
+FROM formation_sql.customers
+where LastName <> 'null';
+
+/*
+SELECT
+    FirstName,
+    LastName
+FROM formation_sql.customers
+where FirstName is not null;*/
+
 
 /* ==============================================================================
-   HANDLE NULL - DATA AGGREGATION
+  2. COALESCE() -
 ===============================================================================*/
 
-/* TASK 1: 
-   Find the average scores of the customers.
-   Uses COALESCE to replace NULL Score with 0.
-*/
-SELECT
-    CustomerID,
-    Score,
-    COALESCE(Score, 0) AS Score2,
-    AVG(Score) OVER () AS AvgScores,
-    AVG(COALESCE(Score, 0)) OVER () AS AvgScores2
-FROM Sales.Customers;
+/* Fonction la plus utilisée*/
 
-/* ==============================================================================
-   HANDLE NULL - MATHEMATICAL OPERATORS
-===============================================================================*/
+-- Syntaxe
+COALESCE(valeur1, valeur2, valeur3, ..., valeurN)
 
-/* TASK 2: 
-   Display the full name of customers in a single field by merging their
-   first and last names, and add 10 bonus points to each customer's score.
-*/
+-- Exemples
+/*
+COALESCE(NULL, NULL, 'Troisième', 'Quatrième'),-- → 'Troisième'
+COALESCE(NULL, 'Deuxième', 'Troisième'),-- → 'Deuxième'
+COALESCE('Premier', NULL, 'Troisième'),-- → 'Premier'*/
+
+
+-- Donner une valeur par défaut si NULL
+SELECT COALESCE(managerid, 0) FROM employees;
+---0
+-- Choisir entre plusieurs colonnes
+SELECT COALESCE(lastname,firstname,country, 'aucun@email.com') FROM formation_sql.customers;
+--Algeria
+--Mary
+
+-- Priorité de sources
+SELECT COALESCE("name",address) FROM formation_sql.client;
+
+---EXEMPLE--
 SELECT
-    CustomerID,
     FirstName,
     LastName,
-    FirstName + ' ' + COALESCE(LastName, '') AS FullName,
+    FirstName || ' ' || COALESCE(LastName, '') AS FullName,
     Score,
     COALESCE(Score, 0) + 10 AS ScoreWithBonus
-FROM Sales.Customers;
+FROM formation_sql.customers;
 
 /* ==============================================================================
-   HANDLE NULL - SORTING DATA
+   3. NULLIF - DIVISION BY ZERO
 ===============================================================================*/
 
-/* TASK 3: 
-   Sort the customers from lowest to highest scores,
-   with NULL values appearing last.
-*/
-SELECT
-    CustomerID,
-    Score
-FROM Sales.Customers
-ORDER BY CASE WHEN Score IS NULL THEN 1 ELSE 0 END, Score;
+-- Syntaxe
+NULLIF(valeur1, valeur2)
+
+-- Exemples
+NULLIF(10, 10) → NULL
+NULLIF(10, 20) → 10
+NULLIF('A', 'A') → NULL
+NULLIF('A', 'B') → 'A'
+
+
+---Cas d'utilisation :
+-- Éviter la division par zéro
+SELECT salary / NULLIF(managerid, 0) FROM employees;
+
+-- Ignorer les valeurs par défaut
+SELECT NULLIF(orderstatus, 'N/A') FROM orders;
+
+-- Traiter les doublons spéciaux
+SELECT NULLIF(orderstatus, 'UNKNOWN') FROM formation_sql.orders;
 
 /* ==============================================================================
-   NULLIF - DIVISION BY ZERO
+---IS DISTINCT FROM et IS NOT DISTINCT FROM
 ===============================================================================*/
 
-/* TASK 4: 
-   Find the sales price for each order by dividing sales by quantity.
-   Uses NULLIF to avoid division by zero.
-*/
-SELECT
-    OrderID,
-    Sales,
-    Quantity,
-    Sales / NULLIF(Quantity, 0) AS Price
-FROM Sales.Orders;
+-- Comparaisons avec NULL
+SELECT * FROM table WHERE col1 IS DISTINCT FROM col2;
+-- Compare NULL = NULL → FALSE
+-- Compare NULL = valeur → TRUE
+-- Compare valeur = valeur → FALSE si différentes
+
+-----Exemples :
+-- Trouver les lignes où col1 et col2 sont différentes (NULL inclus)
+SELECT * FROM employees 
+WHERE salary <> old_salary;
+
+----
+SELECT * FROM employees 
+WHERE salary IS DISTINCT FROM old_salary;
 
 /* ==============================================================================
-   IS NULL - IS NOT NULL
+ --- Fonctions d'agrégation avec NULL
 ===============================================================================*/
 
-/* TASK 5: 
-   Identify the customers who have no scores 
-*/
-SELECT *
-FROM Sales.Customers
-WHERE Score IS NULL;
-
-/* TASK 6: 
-   Identify the customers who have scores 
-*/
-SELECT *
-FROM Sales.Customers
-WHERE Score IS NOT NULL;
-
-/* ==============================================================================
-   LEFT ANTI JOIN
-===============================================================================*/
-
-/* TASK 7: 
-   List all details for customers who have not placed any orders 
-*/
-SELECT
-    c.*,
-    o.OrderID
-FROM Sales.Customers AS c
-LEFT JOIN Sales.Orders AS o
-    ON c.CustomerID = o.CustomerID
-WHERE o.CustomerID IS NULL;
+-- SUM, AVG, COUNT, etc. ignorent les NULL
+SELECT 
+    AVG(old_salary) as moyenne_salaire,          -- NULL ignorés
+    COUNT(old_salary) as nb_bonus,                 -- Compte seulement non-NULL
+    COUNT(*) as total_lignes,                 -- Compte toutes les lignes
+    COUNT(DISTINCT lastname) as nb_employees,
+    COUNT(COALESCE(lastname, 'UNKNOWN')) as nb_employees_ -- NULL distinct compté comme une valeur
+FROM formation_sql.employees;
 
 /* ==============================================================================
    NULLs vs EMPTY STRING vs BLANK SPACES
 ===============================================================================*/
 
-/* TASK 8: 
    Demonstrate differences between NULL, empty strings, and blank spaces 
 */
 WITH Orders AS (
@@ -127,8 +140,23 @@ WITH Orders AS (
 )
 SELECT 
     *,
-    DATALENGTH(Category) AS LenCategory,
+    LENGTH(Category) AS LenCategory,
     TRIM(Category) AS Policy1,
     NULLIF(TRIM(Category), '') AS Policy2,
     COALESCE(NULLIF(TRIM(Category), ''), 'unknown') AS Policy3
 FROM Orders;
+
+
+/* ==============================================================================
+   FILTER (PostgreSQL 9.4+)
+===============================================================================*/
+-- Agréger seulement certaines lignes
+SELECT 
+    department,
+    AVG(salary) FILTER (WHERE old_salary IS NOT NULL) as moyenne_avec_bonus,
+    AVG(salary) FILTER (WHERE old_salary IS NULL) as moyenne_sans_bonus
+FROM employees
+GROUP BY department;
+
+
+
