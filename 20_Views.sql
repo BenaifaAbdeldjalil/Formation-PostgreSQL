@@ -23,63 +23,64 @@
 */
 
 -- Create View
-CREATE VIEW Sales.V_Monthly_Summary AS
+CREATE VIEW    V_Monthly_Summary AS
 (
     SELECT 
-        DATETRUNC(month, OrderDate) AS OrderMonth,
+        DATE_TRUNC('month', OrderDate) AS OrderMonth,
         SUM(Sales) AS TotalSales,
         COUNT(OrderID) AS TotalOrders,
         SUM(Quantity) AS TotalQuantities
-    FROM Sales.Orders
-    GROUP BY DATETRUNC(month, OrderDate)
+    FROM    Orders
+    GROUP BY DATE_TRUNC('month', OrderDate)
 );
-GO
+
 
 -- Query the View
-SELECT * FROM Sales.V_Monthly_Summary;
+SELECT * FROM    V_Monthly_Summary;
 
 -- Drop View if it exists
-IF OBJECT_ID('Sales.V_Monthly_Summary', 'V') IS NOT NULL
-    DROP VIEW Sales.V_Monthly_Summary;
-GO
+DROP VIEW if exists   V_Monthly_Summary;
+
 
 -- Re-create the view with modified logic
-CREATE VIEW Sales.V_Monthly_Summary AS
+CREATE VIEW    V_Monthly_Summary AS
 SELECT 
     DATETRUNC(month, OrderDate) AS OrderMonth,
     SUM(Sales) AS TotalSales,
     COUNT(OrderID) AS TotalOrders
-FROM Sales.Orders
+FROM    Orders
 GROUP BY DATETRUNC(month, OrderDate);
-GO
 
+DROP VIEW if exists   V_Monthly_Summary;
 /* ==============================================================================
    VIEW USE CASE | HIDE COMPLEXITY
 ===============================================================================*/
 
 /* TASK:
-   Create a view that combines details from Orders, Products, Customers, and Employees.
+   Create a view that combines details from Orders, Product, Customers, and Employees.
    This view abstracts the complexity of multiple table joins.
 */
-CREATE VIEW Sales.V_Order_Details AS
+CREATE VIEW    V_Order_Details AS
 (
     SELECT 
         o.OrderID,
         o.OrderDate,
         p.Product,
         p.Category,
-        COALESCE(c.FirstName, '') + ' ' + COALESCE(c.LastName, '') AS CustomerName,
+        COALESCE(c.FirstName, '') || ' ' || COALESCE(c.LastName, '') AS CustomerName,
         c.Country AS CustomerCountry,
-        COALESCE(e.FirstName, '') + ' ' + COALESCE(e.LastName, '') AS SalesName,
+        COALESCE(e.FirstName, '') || ' ' || COALESCE(e.LastName, '') AS SalesName,
         e.Department,
         o.Sales,
         o.Quantity
-    FROM Sales.Orders AS o
-    LEFT JOIN Sales.Products AS p ON p.ProductID = o.ProductID
-    LEFT JOIN Sales.Customers AS c ON c.CustomerID = o.CustomerID
-    LEFT JOIN Sales.Employees AS e ON e.EmployeeID = o.SalesPersonID
+    FROM    Orders AS o
+    LEFT JOIN    Product AS p ON p.ProductID = o.ProductID
+    LEFT JOIN    Customers AS c ON c.CustomerID = o.CustomerID
+    LEFT JOIN    Employees AS e ON e.EmployeeID = o.SalesPersonID
 );
-GO
+
+
+DROP VIEW if exists   V_Order_Details;
 
 /* ==============================================================================
    VIEW USE CASE | DATA SECURITY
@@ -89,23 +90,23 @@ GO
    Create a view for the EU Sales Team that combines details from all tables,
    but excludes data related to the USA.
 */
-CREATE VIEW Sales.V_Order_Details_EU AS
+CREATE VIEW    V_Order_Details_EU AS
 (
     SELECT 
         o.OrderID,
         o.OrderDate,
         p.Product,
         p.Category,
-        COALESCE(c.FirstName, '') + ' ' + COALESCE(c.LastName, '') AS CustomerName,
+        COALESCE(c.FirstName, '') || ' ' || COALESCE(c.LastName, '') AS CustomerName,
         c.Country AS CustomerCountry,
-        COALESCE(e.FirstName, '') + ' ' + COALESCE(e.LastName, '') AS SalesName,
+        COALESCE(e.FirstName, '') || ' '|| COALESCE(e.LastName, '') AS SalesName,
         e.Department,
         o.Sales,
         o.Quantity
-    FROM Sales.Orders AS o
-    LEFT JOIN Sales.Products AS p ON p.ProductID = o.ProductID
-    LEFT JOIN Sales.Customers AS c ON c.CustomerID = o.CustomerID
-    LEFT JOIN Sales.Employees AS e ON e.EmployeeID = o.SalesPersonID
+    FROM    Orders AS o
+    LEFT JOIN    Product AS p ON p.ProductID = o.ProductID
+    LEFT JOIN    Customers AS c ON c.CustomerID = o.CustomerID
+    LEFT JOIN    Employees AS e ON e.EmployeeID = o.SalesPersonID
     WHERE c.Country != 'USA'
 );
-GO
+DROP VIEW if exists   V_Order_Details_EU;
