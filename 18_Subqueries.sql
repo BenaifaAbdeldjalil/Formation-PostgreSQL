@@ -1,244 +1,281 @@
 /* ==============================================================================
-   SQL Subquery Functions
+   SOUS-REQUÊTES SQL (SQL Subqueries)
 -------------------------------------------------------------------------------
-   This script demonstrates various subquery techniques in SQL.
-   It covers result types, subqueries in the FROM clause, in SELECT, in JOIN clauses,
-   with comparison operators, IN, ANY, correlated subqueries, and EXISTS.
-   
-   Table of Contents:
-     1. SUBQUERY - RESULT TYPES
-     2. SUBQUERY - FROM CLAUSE
-     3. SUBQUERY - SELECT
-     4. SUBQUERY - JOIN CLAUSE
-     5. SUBQUERY - COMPARISON OPERATORS 
-     6. SUBQUERY - IN OPERATOR
-     7. SUBQUERY - ANY OPERATOR
-     8. SUBQUERY - CORRELATED 
-     9. SUBQUERY - EXISTS OPERATOR
+   Ce script présente les différentes manières d’utiliser les sous-requêtes en SQL.
+   Les sous-requêtes permettent d’exécuter une requête à l’intérieur d’une autre
+   requête afin de produire des résultats dynamiques et réutilisables.
+
+   Elles peuvent retourner :
+   - une valeur unique (scalaire),
+   - une ligne,
+   - ou un ensemble de lignes (table).
+
+   Table des matières :
+     1. Types de résultats des sous-requêtes
+     2. Sous-requête dans la clause FROM
+     3. Sous-requête dans le SELECT
+     4. Sous-requête dans la clause JOIN
+     5. Sous-requête avec opérateurs de comparaison
+     6. Sous-requête avec IN
+     7. Sous-requête avec ANY
+     8. Sous-requête corrélée
+     9. Sous-requête avec EXISTS
 ===============================================================================
 */
 
 /* ==============================================================================
-   SUBQUERY | RESULT TYPES
+   SOUS-REQUÊTES | TYPES DE RÉSULTATS
 ===============================================================================*/
 
-/* Scalar Query */
+/* Sous-requête scalaire
+   ➜ Retourne UNE seule valeur
+   Exemple : moyenne des ventes
+*/
 SELECT
     AVG(Sales)
-FROM Sales.Orders;
+FROM  Orders;
 
-/* Row Query */
+/* Sous-requête ligne
+   ➜ Retourne une ou plusieurs lignes avec une seule colonne
+*/
 SELECT
     CustomerID
-FROM Sales.Orders;
+FROM  Orders;
 
-/* Table Query */
+/* Sous-requête table
+   ➜ Retourne plusieurs lignes et colonnes
+*/
 SELECT
     OrderID,
     OrderDate
-FROM Sales.Orders;
+FROM  Orders;
 
 /* ==============================================================================
-   SUBQUERY | FROM CLAUSE
+   SOUS-REQUÊTES | CLAUSE FROM
 ===============================================================================*/
 
-/* TASK 1:
-   Find the products that have a price higher than the average price of all products.
+/* TÂCHE 1 :
+   Trouver les produits dont le prix est supérieur au prix moyen
+   - La sous-requête calcule le prix moyen
+   - La requête principale filtre les produits au-dessus de cette moyenne
 */
 
--- Main Query
 SELECT
-*
+        ProductID,
+        Price,
+        AVG(Price) OVER () AS AvgPrice
+    FROM  Product
+    where Price >AvgPrice; ------false
+/*
+SELECT
+    *
 FROM (
-    -- Subquery
     SELECT
         ProductID,
         Price,
         AVG(Price) OVER () AS AvgPrice
-    FROM Sales.Products
+    FROM  Product
 ) AS t
-WHERE Price > AvgPrice;
+WHERE Price > AvgPrice; */
 
-/* TASK 2:
-   Rank Customers based on their total amount of sales.
+----------------------
+----------------------
+/*    Classer les clients selon leur chiffre d’affaires total
+   - La sous-requête calcule les ventes totales par client
+   - La requête externe applique un classement
 */
--- Main Query
 SELECT
+        CustomerID,
+        SUM(Sales) AS TotalSales
+    FROM  Orders
+    GROUP BY CustomerID
+    
+    
+ SELECT
     *,
     RANK() OVER (ORDER BY TotalSales DESC) AS CustomerRank
 FROM (
-    -- Subquery
     SELECT
         CustomerID,
         SUM(Sales) AS TotalSales
-    FROM Sales.Orders
+    FROM  Orders
     GROUP BY CustomerID
 ) AS t;
 
 /* ==============================================================================
-   SUBQUERY | SELECT
+   SOUS-REQUÊTES | CLAUSE SELECT
 ===============================================================================*/
 
-/* TASK 3:
-   Show the product IDs, product names, prices, and the total number of orders.
+/* ----------------------
+   Afficher les produits avec :
+   - leur prix
+   - le nombre total de commandes (identique pour chaque ligne)
+   ➜ Exemple classique de sous-requête scalaire
 */
--- Main Query
 SELECT
     ProductID,
     Product,
     Price,
-    (SELECT COUNT(*) FROM Sales.Orders) AS TotalOrders -- Subquery
-FROM Sales.Products;
+    (SELECT COUNT(*) FROM  Orders) AS TotalOrders
+FROM  Product;
 
 /* ==============================================================================
-   SUBQUERY | JOIN CLAUSE
+   SOUS-REQUÊTES | CLAUSE JOIN
 ===============================================================================*/
 
-/* TASK 4:
-   Show customer details along with their total sales.
+/* ----------------------:
+   Afficher les clients avec leur chiffre d’affaires total
+   - La sous-requête agrège les ventes
+   - Le JOIN permet d’associer les résultats aux clients
 */
--- Main Query
 SELECT
     c.*,
     t.TotalSales
-FROM Sales.Customers AS c
-LEFT JOIN ( 
-    -- Subquery
+FROM  Customers AS c
+LEFT JOIN (
     SELECT
         CustomerID,
         SUM(Sales) AS TotalSales
-    FROM Sales.Orders
+    FROM  Orders
     GROUP BY CustomerID
 ) AS t
-    ON c.CustomerID = t.CustomerID;
+ON c.CustomerID = t.CustomerID;
 
-/* TASK 5:
-   Show all customer details and the total orders of each customer.
+/* ----------------------:
+   Afficher les clients avec le nombre total de commandes
 */
--- Main Query
 SELECT
     c.*,
     o.TotalOrders
-FROM Sales.Customers AS c
+FROM  Customers AS c
 LEFT JOIN (
-    -- Subquery
     SELECT
         CustomerID,
         COUNT(*) AS TotalOrders
-    FROM Sales.Orders
+    FROM  Orders
     GROUP BY CustomerID
 ) AS o
-    ON c.CustomerID = o.CustomerID;
+ON c.CustomerID = o.CustomerID;
 
 /* ==============================================================================
-   SUBQUERY | COMPARISON OPERATORS
+   SOUS-REQUÊTES | OPÉRATEURS DE COMPARAISON
 ===============================================================================*/
 
-/* TASK 6:
-   Find the products that have a price higher than the average price of all products.
+/*---------------------- :
+   Trouver les produits dont le prix est supérieur à la moyenne globale
+   ➜ Sous-requête utilisée directement dans le WHERE
 */
--- Main Query
 SELECT
     ProductID,
-    Price,
-    (SELECT AVG(Price) FROM Sales.Products) AS AvgPrice -- Subquery
-FROM Sales.Products
-WHERE Price > (SELECT AVG(Price) FROM Sales.Products); -- Subquery
+    Price
+FROM  Product
+WHERE Price > (
+    SELECT AVG(Price)
+    FROM  Product
+);
 
 /* ==============================================================================
-   SUBQUERY | IN OPERATOR
+   SOUS-REQUÊTES | OPÉRATEUR IN
 ===============================================================================*/
 
-/* TASK 7:
-   Show the details of orders made by customers in Germany.
+/* ---------------------- :
+   Afficher les commandes passées par des clients allemands
 */
--- Main Query
 SELECT
     *
-FROM Sales.Orders
+FROM  Orders
 WHERE CustomerID IN (
-    -- Subquery
-    SELECT
-        CustomerID
-    FROM Sales.Customers
+    SELECT CustomerID
+    FROM  Customers
     WHERE Country = 'Germany'
 );
 
-/* TASK 8:
-   Show the details of orders made by customers not in Germany.
-*/
--- Main Query
+
 SELECT
     *
-FROM Sales.Orders
+FROM  Orders
+WHERE CustomerID IN (
+    SELECT *
+    FROM  Customers
+    WHERE Country = 'Germany'
+); ----false
+/* ---------------------- :
+   Afficher les commandes passées par des clients NON allemands
+*/
+SELECT
+    *
+FROM  Orders
 WHERE CustomerID NOT IN (
-    -- Subquery
-    SELECT
-        CustomerID
-    FROM Sales.Customers
+    SELECT CustomerID
+    FROM  Customers
     WHERE Country = 'Germany'
 );
 
 /* ==============================================================================
-   SUBQUERY | ANY OPERATOR
+   SOUS-REQUÊTES | OPÉRATEUR ANY
 ===============================================================================*/
 
-/* TASK 9:
-   Find female employees whose salaries are greater than the salaries of any male employees.
+/* ----------------------:
+   Trouver les employées dont le salaire est supérieur
+   au salaire d’au moins un employé masculin
 */
 SELECT
-    EmployeeID, 
+    EmployeeID,
     FirstName,
     Salary
-FROM Sales.Employees
+FROM  Employees
 WHERE Gender = 'F'
   AND Salary > ANY (
       SELECT Salary
-      FROM Sales.Employees
+      FROM  Employees
       WHERE Gender = 'M'
   );
 
 /* ==============================================================================
-   CORRELATED SUBQUERY
+   SOUS-REQUÊTES CORRÉLÉES
 ===============================================================================*/
 
-/* TASK 10:
-   Show all customer details and the total orders for each customer using a correlated subquery.
+/* ----------------------:
+   Afficher les clients avec leur nombre total de commandes
+   - La sous-requête dépend de la ligne courante (CustomerID)
+   - Elle est réévaluée pour chaque client
 */
 SELECT
     *,
-    (SELECT COUNT(*)
-     FROM Sales.Orders o
-     WHERE o.CustomerID = c.CustomerID) AS TotalSales
-FROM Sales.Customers AS c;
-
+    (
+        SELECT COUNT(*)
+        FROM  Orders o
+        WHERE o.CustomerID = c.CustomerID
+    ) AS TotalOrders
+FROM  Customers AS c;
 
 /* ==============================================================================
-   SUBQUERY | EXISTS OPERATOR
+   SOUS-REQUÊTES | OPÉRATEUR EXISTS
 ===============================================================================*/
 
-/* TASK 11:
-   Show the details of orders made by customers in Germany.
+/* ----------------------:
+   Afficher les commandes des clients allemands
+   ➜ EXISTS vérifie l’existence d’au moins une ligne correspondante
 */
 SELECT
     *
-FROM Sales.Orders AS o
+FROM  Orders AS o
 WHERE EXISTS (
     SELECT 1
-    FROM Sales.Customers AS c
-    WHERE Country = 'Germany'
-      AND o.CustomerID = c.CustomerID
+    FROM  Customers AS c
+    WHERE c.Country = 'Germany'
+      AND c.CustomerID = o.CustomerID
 );
 
-/* TASK 12:
-   Show the details of orders made by customers not in Germany.
+/*---------------------- :
+   Afficher les commandes des clients NON allemands
 */
 SELECT
     *
-FROM Sales.Orders AS o
+FROM  Orders AS o
 WHERE NOT EXISTS (
     SELECT 1
-    FROM Sales.Customers AS c
-    WHERE Country = 'Germany'
-      AND o.CustomerID = c.CustomerID
+    FROM  Customers AS c
+    WHERE c.Country = 'Germany'
+      AND c.CustomerID = o.CustomerID
 );
