@@ -19,9 +19,12 @@ SELECT
 ;
 
 /* Précision sur l’heure (nombre de chiffres après la virgule) */
-SELECT
-    CURRENT_TIME(2) AS time_precision,         -- Heure avec 2 décimales
-    CURRENT_TIMESTAMP(3) AS timestamp_precision -- Timestamp avec 3 décimales
+select
+	CURRENT_TIME AS time_precision,  -- Heure
+    CURRENT_TIME(3) AS time_precision_3,         -- Heure avec 1 décimales
+    CURRENT_TIME(0) AS time_precision_0,         -- Heure avec 3 décimales
+    CURRENT_TIMESTAMP(3) AS timestamp_precision, -- Timestamp avec 3 décimales
+    CURRENT_TIMESTAMP(1) AS timestamp_precision1 -- Timestamp avec 1 décimales
 ;
 
 /* Fonctions locales (sans timezone) */
@@ -37,7 +40,34 @@ SELECT
 /* ==============================================================================
    2. EXTRACTION DES PARTIES D’UNE DATE
 =============================================================================== */
+---text
+SELECT
+    orderid,
+    orderdate,
+    TO_CHAR(orderdate, 'Day') AS nom_jour,
+    -- Nom du jour en toutes lettres
+    TO_CHAR(orderdate, 'Month') AS nom_mois
+FROM orders;
 
+
+----numeric
+SELECT
+    orderid,
+    orderdate,
+    -- Nom du mois en toutes lettres
+    EXTRACT(YEAR FROM orderdate) AS annee,
+    -- Extrait l’année sous forme numérique
+    EXTRACT(MONTH FROM orderdate) AS mois,
+    -- Extrait le mois (1–12)
+    EXTRACT(DAY FROM orderdate) AS jour,
+    -- Extrait le jour du mois
+    EXTRACT(QUARTER FROM orderdate) AS trimestre,
+    -- Extrait le trimestre (1–4)
+    EXTRACT(WEEK FROM orderdate) AS semaine
+    -- Numéro de la semaine
+FROM orders;
+
+----assemblage
 SELECT
     orderid,
     orderdate,
@@ -55,8 +85,8 @@ SELECT
     -- Extrait le trimestre (1–4)
     EXTRACT(WEEK FROM orderdate) AS semaine
     -- Numéro de la semaine
+    
 FROM orders;
-
 /* ==============================================================================
    3. DATE_TRUNC() – AGRÉGATION PAR PÉRIODE
 =============================================================================== */
@@ -77,7 +107,7 @@ GROUP BY EXTRACT(YEAR FROM orderdate);
 SELECT
     orderid,
     orderdate,
-    DATE_TRUNC('month', orderdate)
+ DATE_TRUNC('month', orderdate)
         + INTERVAL '1 month'
         - INTERVAL '1 day' AS fin_du_mois,
  DATE_TRUNC('month', orderdate)
@@ -97,13 +127,13 @@ FROM orders;
 =============================================================================== */
 
 SELECT
-    EXTRACT(YEAR FROM order_date) AS order_year
+    EXTRACT(YEAR FROM orderdate) AS order_year
     -- Récupère l’année de la date de commande
 FROM  orders;
 
-SELECT *
+SELECT EXTRACT(MONTH FROM orderdate),*
 FROM  orders
-WHERE EXTRACT(MONTH FROM order_date) = 2;
+WHERE EXTRACT(MONTH FROM orderdate) = 2;
 -- Filtre uniquement les commandes du mois de février
 
 /* ==============================================================================
@@ -111,21 +141,30 @@ WHERE EXTRACT(MONTH FROM order_date) = 2;
 =============================================================================== */
 
 SELECT
-    order_id,
-    creation_time,
+    orderid,
+    orderdate,
 
-    TO_CHAR(creation_time, 'YYYY-MM-DD') AS format_iso,
+    TO_CHAR(orderdate, 'YYYY-MM-DD') AS format_iso,
     -- Format ISO standard
 
-    TO_CHAR(creation_time, 'DD-MM-YYYY') AS format_eu,
+    TO_CHAR(orderdate, 'DD-MM-YYYY') AS format_eu,
     -- Format européen
 
-    TO_CHAR(creation_time, 'HH24:MI:SS') AS heure,
+    TO_CHAR(orderdate, 'HH24:MI:SS') AS heure,
     -- Affichage de l’heure
 
-    TO_CHAR(creation_time, 'FMDay FMMonth') AS date_lisible
+    TO_CHAR(orderdate, 'FMDay FMMonth') AS date_lisible
     -- Affichage lisible sans espaces (FM = Fill Mode)
 FROM  orders;
+
+
+----date non text
+SELECT
+    orderid,
+    creationtime,
+    TO_CHAR(creationtime, 'YYYY-MM-DD') AS format_iso
+FROM  orders;
+
 
 /* ==============================================================================
    7. CAST() – CONVERSION DE TYPES
@@ -134,8 +173,15 @@ FROM  orders;
 SELECT
     CAST('2025-08-20' AS DATE) AS texte_vers_date,
     -- Convertit un texte en date
-
     CAST(NOW() AS DATE) AS timestamp_vers_date
+    -- Supprime l’heure d’un timestamp
+;
+
+----- alternative
+SELECT
+    '2025-08-20' :: DATE as texte_vers_date,
+    -- Convertit un texte en date
+    NOW():: DATE AS timestamp_vers_date
     -- Supprime l’heure d’un timestamp
 ;
 
@@ -144,27 +190,25 @@ SELECT
 =============================================================================== */
 
 SELECT
-    order_date,
-    order_date + INTERVAL '10 days' AS nouvelle_date
+    orderdate,
+    orderdate + INTERVAL '10 days' AS nouvelle_date
     -- Ajoute 10 jours à la date
 FROM  orders;
 
 SELECT
-    order_date,
-    order_date + INTERVAL '3 months' AS apres_3_mois,
-    order_date + INTERVAL '1 year' AS apres_1_an
+    orderdate,
+    orderdate + INTERVAL '3 months' AS apres_3_mois,
+    orderdate + INTERVAL '1 year' AS apres_1_an
     -- Ajoute des mois et des années
 FROM  orders;
 
 /* ==============================================================================
    9. CALCUL DES DIFFÉRENCES DE DATES
 =============================================================================== */
-
 select
 	orderid,
     orderdate,
-    shipdate,
-    AGE(shipdate,orderdate ) AS duree_livraison
+    shipdate
     -- Calcule la différence sous forme d’intervalle lisible
 FROM formation_sql.ordersarchive;
 
@@ -189,9 +233,11 @@ SELECT
     AGE(birthdate, NOW()) AS age_complet_inverse
     -- Calcule l’âge exact (années, mois, jours)
 FROM employees;
+
 -------
-SELECT
-    JUSTIFY_DAYS(INTERVAL '40 days') AS interval_normalise,
+select
+
+JUSTIFY_DAYS(INTERVAL '40 days') AS interval_normalise, --40 days  ----> 1 mon 10 days
     -- Convertit 30 jours en 1 mois + reste en jours,
-JUSTIFY_DAYS(INTERVAL '90 days') AS interval_normalise
+JUSTIFY_DAYS(INTERVAL '90 days') AS interval_normalise  --90 days  ---> 3 mons
 -- Convertit 30 jours en 1 mois + reste en jours;
