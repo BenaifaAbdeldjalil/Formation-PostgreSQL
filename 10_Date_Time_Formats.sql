@@ -1,11 +1,6 @@
 /* ==============================================================================
    POSTGRESQL – FORMATS DATE, HEURE & NOMBRES
 -------------------------------------------------------------------------------
-   Ce script présente :
-   - les formats numériques disponibles avec TO_CHAR
-   - les formats de date et d’heure
-   - les différentes parties d’une date
-   - l’impact des locales (formats culturels)
 
    PostgreSQL utilise principalement :
      - TO_CHAR() pour le formatage
@@ -19,7 +14,16 @@
 ===============================================================================
 */
 
-
+/*
+| Besoin         | EXTRACT  | TO_CHAR  | DATE_TRUNC |
+| -------------- | -------  | -------- | ---------- |
+| Calculs        | ✅       | ❌       | ⚠️         |
+| Affichage      | ❌       | ✅       | ⚠️         |
+| GROUP BY temps | ⚠️       | ❌       | ✅         |
+| Retourne       | Nombre   | Texte   | Date       |
+| Performance    | ⭐⭐⭐      | ⭐      | ⭐⭐⭐        |
+*/
+-------------------------------------------------------
 
 /* ==============================================================================
    1. FORMATS DE DATE & HEURE (TO_CHAR)
