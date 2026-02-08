@@ -6,14 +6,26 @@
 =============================================================================== */
 
 /* ============================================================================== 
-   0. Création de la base de données
+   00. Création de la base et du schéma
+-------------------------------------------------------------------------------
+   Énoncé : Créer une base de données de formation et un schéma dédié
+   pour y stocker toutes les tables, vues et fonctions.
 =============================================================================== */
--- Énoncé : Créer une base nommée "formation_sql"
-DROP DATABASE IF EXISTS formation_sql;
-CREATE DATABASE formation_sql;
+
+-- Création de la base
+DROP DATABASE IF EXISTS test_sql;
+CREATE DATABASE test_sql;
 
 -- Connexion à la base
 \c formation_sql
+
+-- Création du schéma
+DROP SCHEMA IF EXISTS test_sql CASCADE;
+CREATE SCHEMA test_sql;
+
+-- Définir le schéma par défaut pour la session
+SET search_path TO test_sql;
+
 
 /* ============================================================================== 
    1. Data Definition (DDL) : Création des tables
