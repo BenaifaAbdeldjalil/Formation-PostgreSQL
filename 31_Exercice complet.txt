@@ -1,0 +1,474 @@
+/* ============================================================================== 
+   Exercice complet PostgreSQL : Base de données de gestion de clients et employés
+-------------------------------------------------------------------------------
+   Objectif : Apprendre la création de base, tables, contraintes, insertion, 
+   sélection, filtrage, jointures et manipulations SQL.
+=============================================================================== */
+
+/* ============================================================================== 
+   0. Création de la base de données
+=============================================================================== */
+-- Énoncé : Créer une base nommée "formation_sql"
+DROP DATABASE IF EXISTS formation_sql;
+CREATE DATABASE formation_sql;
+
+-- Connexion à la base
+\c formation_sql
+
+/* ============================================================================== 
+   1. Data Definition (DDL) : Création des tables
+=============================================================================== */
+-- Table Customers
+-- Besoin : Stocker les informations des clients
+-- colonnes : 
+--   customerid (int) : Identifiant unique client, clé primaire, NOT NULL
+--   firstname (varchar) : Prénom, longueur max 20, NOT NULL
+--   lastname (varchar) : Nom, longueur max 20, NOT NULL
+--   country (varchar) : Pays, longueur max 7, CHECK (valeurs autorisées)
+--   score (int) : Score client, valeur positive, CHECK (score >= 0)
+
+DROP TABLE IF EXISTS formation_sql.customers;
+
+CREATE TABLE formation_sql.customers (
+    customerid INT PRIMARY KEY,
+    firstname VARCHAR(20) NOT NULL,
+    lastname VARCHAR(20) NOT NULL,
+    country VARCHAR(7) NOT NULL CHECK (country IN ('USA','FR','DE','ES','IT')),
+    score INT CHECK (score >= 0)
+);
+
+-- Table Employees
+-- Besoin : Stocker les informations des employés
+-- colonnes :
+--   employeeid (int) : identifiant unique, clé primaire
+--   firstname, lastname, department, birthdate, gender, salary, managerid, old_salary
+DROP TABLE IF EXISTS formation_sql.employees;
+
+CREATE TABLE formation_sql.employees (
+    employeeid INT PRIMARY KEY,
+    firstname VARCHAR(15) NOT NULL,
+    lastname VARCHAR(20) NOT NULL,
+    department VARCHAR(20) NOT NULL,
+    birthdate DATE NOT NULL,
+    gender CHAR(1) NOT NULL CHECK (gender IN ('M','F')),
+    salary INT NOT NULL CHECK (salary >= 0),
+    managerid INT NULL REFERENCES formation_sql.employees(employeeid),
+    old_salary INT
+);
+
+/* ============================================================================== 
+   2. Data Manipulation (DML) : Insertion de données
+=============================================================================== */
+-- Customers : insertion valide
+INSERT INTO formation_sql.customers(customerid, firstname, lastname, country, score)
+VALUES 
+(1,'Alice','Dupont','FR', 80),
+(2,'Bob','Martin','USA', 70),
+(3,'Carla','Lopez','ES', 95);
+
+-- Customers : insertion non valide (score négatif)
+-- INSERT INTO formation_sql.customers(customerid, firstname, lastname, country, score)
+-- VALUES (4,'David','Smith','DE', -10); -- Erreur CHECK score >= 0
+
+-- Customers : insertion non valide (pays interdit)
+-- INSERT INTO formation_sql.customers(customerid, firstname, lastname, country, score)
+-- VALUES (5,'Eve','Johnson','UK', 60); -- Erreur CHECK country
+
+-- Employees : insertion valide
+INSERT INTO formation_sql.employees(employeeid, firstname, lastname, department, birthdate, gender, salary, managerid)
+VALUES
+(1,'John','Doe','IT','1980-05-12','M',5000,NULL),
+(2,'Jane','Smith','HR','1985-07-19','F',4500,1),
+(3,'Tom','Brown','IT','1990-03-22','M',4000,1);
+
+-- Employees : insertion non valide (gender invalide)
+-- INSERT INTO formation_sql.employees(employeeid, firstname, lastname, department, birthdate, gender, salary)
+-- VALUES (4,'Anna','Lee','Finance','1992-08-15','X',3000); -- Erreur CHECK gender
+
+/* ============================================================================== 
+   3. SELECT et Filtering : récupération des données
+=============================================================================== */
+-- Sélection simple
+SELECT * FROM formation_sql.customers;
+
+-- Sélection avec filtre
+SELECT * FROM formation_sql.customers
+WHERE country = 'FR';
+
+-- Sélection avec ordre
+SELECT * FROM formation_sql.customers
+ORDER BY score DESC;
+
+/* ============================================================================== 
+   4. JOINS : Combiner Customers et Employees
+=============================================================================== */
+-- Énoncé : Lister les clients et leur manager (si manager est un employé)
+-- LEFT JOIN Customers -> Employees via managerid
+SELECT c.customerid, c.firstname AS customer_firstname, c.lastname AS customer_lastname,
+       e.firstname AS manager_firstname, e.lastname AS manager_lastname
+FROM formation_sql.customers c
+LEFT JOIN formation_sql.employees e
+ON c.customerid = e.managerid; -- Exemple pour illustrer join, ici managerid est FK vers employees
+
+-- INNER JOIN : Liste des employés avec département IT
+SELECT e.employeeid, e.firstname, e.lastname, e.department
+FROM formation_sql.employees e
+INNER JOIN formation_sql.employees m
+ON e.managerid = m.employeeid
+WHERE e.department = 'IT';
+
+
+/* ============================================================================== 
+   5. SETS : Opérations sur ensembles (UNION, INTERSECT, EXCEPT)
+-------------------------------------------------------------------------------
+   Énoncé : Comparer les clients selon leur pays et score
+=============================================================================== */
+-- Clients français ou américains
+SELECT firstname, lastname, country FROM formation_sql.customers
+WHERE country IN ('FR','USA');
+
+-- Clients avec score > 80
+SELECT firstname, lastname, country FROM formation_sql.customers
+WHERE score > 80;
+
+-- UNION : tous les clients des deux ensembles (sans doublons)
+SELECT firstname, lastname, country FROM formation_sql.customers
+WHERE country IN ('FR','USA')
+UNION
+SELECT firstname, lastname, country FROM formation_sql.customers
+WHERE score > 80;
+
+-- INTERSECT : clients qui sont dans les deux ensembles
+SELECT firstname, lastname, country FROM formation_sql.customers
+WHERE country IN ('FR','USA')
+INTERSECT
+SELECT firstname, lastname, country FROM formation_sql.customers
+WHERE score > 80;
+
+-- EXCEPT : clients français ou américains mais avec score <= 80
+SELECT firstname, lastname, country FROM formation_sql.customers
+WHERE country IN ('FR','USA')
+EXCEPT
+SELECT firstname, lastname, country FROM formation_sql.customers
+WHERE score > 80;
+
+
+/* ============================================================================== 
+   6. Fonctions sur chaînes et nombres
+-------------------------------------------------------------------------------
+   Énoncé : Manipuler prénom, nom et score des clients
+=============================================================================== */
+-- Fonction CONCAT
+SELECT CONCAT(firstname,' ',lastname) AS fullname, score FROM formation_sql.customers;
+
+-- Fonction LENGTH
+SELECT firstname, LENGTH(firstname) AS firstname_length FROM formation_sql.customers;
+
+-- Fonction UPPER/LOWER
+SELECT UPPER(firstname) AS firstname_upper, LOWER(lastname) AS lastname_lower FROM formation_sql.customers;
+
+-- Fonctions numériques
+SELECT score, ROUND(score/10.0,1) AS score_rounded, score*2 AS score_double FROM formation_sql.customers;
+
+
+/* ============================================================================== 
+   7. Fonctions sur dates et formats
+-------------------------------------------------------------------------------
+   Énoncé : Manipuler date de naissance des employés
+=============================================================================== */
+-- Age des employés
+SELECT firstname, lastname, birthdate,
+       EXTRACT(YEAR FROM AGE(CURRENT_DATE, birthdate)) AS age
+FROM formation_sql.employees;
+
+-- Format date
+SELECT firstname, lastname, TO_CHAR(birthdate,'DD/MM/YYYY') AS birthdate_formatted
+FROM formation_sql.employees;
+
+
+/* ============================================================================== 
+   8. Gestion des NULL
+-------------------------------------------------------------------------------
+   Énoncé : Traiter les valeurs NULL
+=============================================================================== */
+-- Exemple : old_salary peut être NULL
+SELECT firstname, lastname, old_salary,
+       COALESCE(old_salary,0) AS old_salary_default
+FROM formation_sql.employees;
+
+-- IS NULL / IS NOT NULL
+SELECT firstname, lastname FROM formation_sql.employees
+WHERE old_salary IS NULL;
+
+
+/* ============================================================================== 
+   9. Agrégations et Window Functions
+-------------------------------------------------------------------------------
+   Énoncé : Total, moyenne et rang des scores clients
+=============================================================================== */
+-- Agrégations simples
+SELECT COUNT(*) AS nb_clients, AVG(score) AS avg_score, MAX(score) AS max_score
+FROM formation_sql.customers;
+
+-- Window function : rang
+SELECT customerid, firstname, lastname, score,
+       RANK() OVER (ORDER BY score DESC) AS rank_score
+FROM formation_sql.customers;
+
+
+/* ============================================================================== 
+   10. Subqueries et CTE
+-------------------------------------------------------------------------------
+   Énoncé : Clients ayant score supérieur à la moyenne
+=============================================================================== */
+-- Sous-requête
+SELECT firstname, lastname, score
+FROM formation_sql.customers
+WHERE score > (SELECT AVG(score) FROM formation_sql.customers);
+
+-- CTE
+WITH avg_score_cte AS (
+    SELECT AVG(score) AS avg_score FROM formation_sql.customers
+)
+SELECT firstname, lastname, score
+FROM formation_sql.customers, avg_score_cte
+WHERE score > avg_score_cte.avg_score;
+
+
+/* ============================================================================== 
+   11. Vues et Tables temporaires
+-------------------------------------------------------------------------------
+   Énoncé : Créer une vue pour clients à score élevé et table temporaire pour traitement
+=============================================================================== */
+-- Vue
+CREATE OR REPLACE VIEW formation_sql.high_score_customers AS
+SELECT customerid, firstname, lastname, score
+FROM formation_sql.customers
+WHERE score >= 90;
+
+-- Sélection à partir de la vue
+SELECT * FROM formation_sql.high_score_customers;
+
+-- Table temporaire
+CREATE TEMP TABLE temp_employees AS
+SELECT employeeid, firstname, salary FROM formation_sql.employees;
+
+SELECT * FROM temp_employees;
+
+
+/* ============================================================================== 
+   12. Procédures stockées
+-------------------------------------------------------------------------------
+   Énoncé : Créer une procédure pour augmenter le salaire d'un employé
+=============================================================================== */
+-- Procédure : augmenter salaire
+CREATE OR REPLACE PROCEDURE formation_sql.increase_salary(emp_id INT, increment INT)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    UPDATE formation_sql.employees
+    SET salary = salary + increment
+    WHERE employeeid = emp_id;
+END;
+$$;
+
+-- Test de la procédure
+CALL formation_sql.increase_salary(3,500);
+
+-- Vérification
+SELECT employeeid, firstname, salary FROM formation_sql.employees
+WHERE employeeid = 3;
+
+
+/* ============================================================================== 
+   13. CASE Statements
+-------------------------------------------------------------------------------
+   Énoncé : Classer les clients selon leur score
+=============================================================================== */
+SELECT customerid, firstname, lastname, score,
+       CASE
+           WHEN score >= 90 THEN 'Excellent'
+           WHEN score >= 70 THEN 'Good'
+           ELSE 'Average'
+       END AS score_category
+FROM formation_sql.customers;
+
+
+/* ============================================================================== 
+   14. Fenêtres de base (Window Functions Basics)
+-------------------------------------------------------------------------------
+   Énoncé : Numérotation et cumul des salaires employés
+=============================================================================== */
+SELECT employeeid, firstname, salary,
+       ROW_NUMBER() OVER (ORDER BY salary DESC) AS row_num,
+       SUM(salary) OVER (ORDER BY salary DESC ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS cumulative_salary
+FROM formation_sql.employees;
+
+
+/* ============================================================================== 
+   15. Fenêtres de classement (Window Ranking)
+-------------------------------------------------------------------------------
+   Énoncé : Rangs et partition par département
+=============================================================================== */
+SELECT employeeid, firstname, department, salary,
+       RANK() OVER (PARTITION BY department ORDER BY salary DESC) AS dept_rank
+FROM formation_sql.employees;
+
+
+/* ============================================================================== 
+   16. Valeurs des fenêtres (Window Value Functions)
+-------------------------------------------------------------------------------
+   Énoncé : Salaires précédents et suivants
+=============================================================================== */
+SELECT employeeid, firstname, department, salary,
+       LAG(salary) OVER (PARTITION BY department ORDER BY salary) AS prev_salary,
+       LEAD(salary) OVER (PARTITION BY department ORDER BY salary) AS next_salary
+FROM formation_sql.employees;
+
+
+/* ============================================================================== 
+   17. Subqueries avancées
+-------------------------------------------------------------------------------
+   Énoncé : Clients dont le score est supérieur au maximum de certains pays
+=============================================================================== */
+SELECT firstname, lastname, score
+FROM formation_sql.customers
+WHERE score > (SELECT MAX(score) 
+               FROM formation_sql.customers
+               WHERE country = 'FR');
+
+
+/* ============================================================================== 
+   18. Common Table Expressions (CTE)
+-------------------------------------------------------------------------------
+   Énoncé : Moyenne et écart de score par pays
+=============================================================================== */
+WITH country_avg AS (
+    SELECT country, AVG(score) AS avg_score
+    FROM formation_sql.customers
+    GROUP BY country
+)
+SELECT c.firstname, c.lastname, c.country, c.score, ca.avg_score
+FROM formation_sql.customers c
+JOIN country_avg ca ON c.country = ca.country
+WHERE c.score > ca.avg_score;
+
+
+/* ============================================================================== 
+   19. Vues
+-------------------------------------------------------------------------------
+   Énoncé : Créer une vue pour les employés à haut salaire
+=============================================================================== */
+CREATE OR REPLACE VIEW formation_sql.high_salary_employees AS
+SELECT employeeid, firstname, lastname, department, salary
+FROM formation_sql.employees
+WHERE salary >= 6000;
+
+SELECT * FROM formation_sql.high_salary_employees;
+
+
+/* ============================================================================== 
+   20. Tables temporaires
+-------------------------------------------------------------------------------
+   Énoncé : Stocker temporairement les employés d’un département
+=============================================================================== */
+CREATE TEMP TABLE temp_department_employees AS
+SELECT * FROM formation_sql.employees
+WHERE department = 'Sales';
+
+SELECT * FROM temp_department_employees;
+
+
+/* ============================================================================== 
+   21. Triggers
+-------------------------------------------------------------------------------
+   Énoncé : Mettre à jour la colonne old_salary avant modification de salary
+=============================================================================== */
+CREATE OR REPLACE FUNCTION formation_sql.update_old_salary()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.old_salary := OLD.salary;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_update_old_salary
+BEFORE UPDATE ON formation_sql.employees
+FOR EACH ROW
+EXECUTE FUNCTION formation_sql.update_old_salary();
+
+-- Test
+UPDATE formation_sql.employees SET salary = salary + 500 WHERE employeeid = 2;
+
+
+/* ============================================================================== 
+   22. Indexes
+-------------------------------------------------------------------------------
+   Énoncé : Optimiser les recherches sur le nom et département
+=============================================================================== */
+CREATE INDEX idx_customers_lastname ON formation_sql.customers(lastname);
+CREATE INDEX idx_employees_department ON formation_sql.employees(department);
+
+
+/* ============================================================================== 
+   23. Surveillance / Monitoring
+-------------------------------------------------------------------------------
+   Énoncé : Requêtes pour surveiller la base
+=============================================================================== */
+-- Tables existantes
+SELECT table_name FROM information_schema.tables WHERE table_schema='formation_sql';
+
+-- Taille des tables
+SELECT relname AS table_name, pg_size_pretty(pg_total_relation_size(relid)) AS total_size
+FROM pg_catalog.pg_statio_user_tables;
+
+-- Sessions actives
+SELECT pid, usename, application_name, state
+FROM pg_stat_activity;
+
+
+/* ============================================================================== 
+   24. Partitions
+-------------------------------------------------------------------------------
+   Énoncé : Partitionner les ventes par année (exemple fictif)
+=============================================================================== */
+-- Table orders fictive
+CREATE TABLE formation_sql.orders (
+    orderid SERIAL PRIMARY KEY,
+    customerid INT REFERENCES formation_sql.customers(customerid),
+    orderdate DATE NOT NULL,
+    total NUMERIC(10,2)
+) PARTITION BY RANGE (orderdate);
+
+CREATE TABLE formation_sql.orders_2025 PARTITION OF formation_sql.orders
+    FOR VALUES FROM ('2025-01-01') TO ('2025-12-31');
+
+CREATE TABLE formation_sql.orders_2026 PARTITION OF formation_sql.orders
+    FOR VALUES FROM ('2026-01-01') TO ('2026-12-31');
+
+
+/* ============================================================================== 
+   25. Performance Optimization
+-------------------------------------------------------------------------------
+   Énoncé : Vérifier les index et optimiser les requêtes
+=============================================================================== */
+-- Analyse d’une requête
+EXPLAIN ANALYZE
+SELECT * FROM formation_sql.employees WHERE department='IT' AND salary>5000;
+
+
+/* ============================================================================== 
+   26. Monitoring avancé
+-------------------------------------------------------------------------------
+   Énoncé : Surveillance de la base PostgreSQL
+=============================================================================== */
+-- Locks actifs
+SELECT pid, relation::regclass, mode, granted
+FROM pg_locks
+JOIN pg_stat_activity ON pg_locks.pid = pg_stat_activity.pid;
+
+-- Tables les plus volumineuses
+SELECT schemaname, relname, pg_size_pretty(pg_total_relation_size(relid)) AS size
+FROM pg_stat_user_tables
+ORDER BY pg_total_relation_size(relid) DESC;
+
