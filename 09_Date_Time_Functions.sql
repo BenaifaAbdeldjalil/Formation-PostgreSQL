@@ -120,3 +120,39 @@ FROM employees;
 
 SELECT
     JUSTIFY_DAYS(INTERVAL '40 days') AS interval_normalise;
+
+
+
+/*
+| Besoin         | EXTRACT  | TO_CHAR  | DATE_TRUNC |
+| -------------- | -------  | -------- | ---------- |
+| Calculs        | ✅       | ❌       | ⚠️         |
+| Affichage      | ❌       | ✅       | ⚠️         |
+| GROUP BY temps | ⚠️       | ❌       | ✅         |
+| Retourne       | Nombre   | Texte   | Date       |
+| Performance    | ⭐⭐⭐      | ⭐      | ⭐⭐⭐        |
+*/
+-------------------------------------------------------
+
+
+--🧠 BONNES PRATIQUES (à retenir)
+--✔️ Pour filtrer
+-- Bon
+WHERE date_commande >= '2024-01-01'
+  AND date_commande <  '2025-01-01'
+
+---❌ À éviter
+
+WHERE EXTRACT(YEAR FROM date_commande) = 2024
+   
+----✔️ Pour regrouper par période
+DATE_TRUNC('month', date_commande)
+
+---✔️ Pour afficher
+TO_CHAR(date_commande, 'DD/MM/YYYY')
+
+/*En résumé ultra-court
+EXTRACT = chiffres
+TO_CHAR = affichage
+DATE_TRUNC = regroupement temporel
+*/
