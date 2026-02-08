@@ -1,428 +1,369 @@
 /* ==============================================================================
-   30x SQL Performance Tips
--------------------------------------------------------------------------------
-   This section demonstrates best practices for fetching data, filtering,
-   joins, UNION, aggregations, subqueries/CTE, DDL, and indexing.
-   It covers techniques such as selecting only necessary columns,
-   proper filtering methods, explicit joins, avoiding redundant logic,
-   and efficient indexing strategies.
-   
-   Table of Contents:
-     1. FETCHING DATA
-     2. FILTERING
-     3. JOINS
-     4. UNION
-     5. AGGREGATIONS
-     6. SUBQUERIES, CTE
-     7. DDL
-     8. INDEXING
-===============================================================================
+   20 conseils de performance SQL
+=============================================================================== 
 */
 
 -- ###############################################################
--- #                        FETCHING DATA                        #
+-- #                 1. RÉCUPÉRATION DE DONNÉES                #
+-- ###############################################################
+
+-- =========================================================
+-- 1. Sélectionner uniquement les colonnes nécessaires
+-- =========================================================
+
+-- Mauvaise pratique : récupère tout, surcharge inutilement le réseau et le serveur
+SELECT * FROM formation_sql.Customers;
+
+-- Bonne pratique : récupère seulement ce dont on a besoin
+SELECT CustomerID, FirstName, LastName 
+FROM formation_sql.Customers;
+
+-- ============================================
+-- 2. Éviter DISTINCT et ORDER BY inutiles
+-- ============================================
+
+-- Mauvaise pratique : DISTINCT + ORDER BY coûte cher si non nécessaire
+SELECT DISTINCT FirstName 
+FROM formation_sql.Customers 
+ORDER BY FirstName;
+
+-- Bonne pratique : simple sélection, moins de travail pour le moteur
+SELECT FirstName 
+FROM formation_sql.Customers;
+
+-- ============================================
+-- 3. Limiter le nombre de lignes pour exploration
+-- ============================================
+
+-- Mauvaise pratique : récupère toutes les lignes inutilement
+SELECT OrderID, Sales 
+FROM formation_sql.Orders;
+
+-- Bonne pratique : limite les lignes pour explorer les données
+SELECT OrderID, Sales 
+FROM formation_sql.Orders
+limit 10 ;
+
+
+-- ###############################################################
+-- #                        2. FILTRAGE                        #
 -- ###############################################################
 
 -- ============================================
--- Tip 1: Select Only What You Need
+-- 4. Créer un index sur les colonnes utilisées dans WHERE
 -- ============================================
 
--- Bad Practice
-SELECT * FROM Sales.Customers
-
--- Good Practice
-SELECT CustomerID, FirstName, LastName FROM Sales.Customers
-
--- ============================================
--- Tip 2: Avoid unnecessary DISTINCT & ORDER BY
--- ============================================
-
--- Bad Practice
-SELECT DISTINCT 
-	FirstName 
-FROM Sales.Customers 
-ORDER BY FirstName
-
--- Good Practice
-SELECT 
-	FirstName 
-FROM Sales.Customers
-
--- ============================================
--- Tip 3: For Exploration Purpose, Limit Rows!
--- ============================================
-
--- Bad Practice
-SELECT 
-	OrderID,
-	Sales 
-FROM Sales.Orders
-
--- Good Practice
-SELECT TOP 10 
-	OrderID,
-	Sales 
-FROM Sales.Orders
-
--- ###########################################################
--- #                        FILTERING                        #
--- ###########################################################
-
-/* ==============================================================================
-   Tip 4: Create nonclustered Index on frequently used Columns in WHERE clause
-===============================================================================*/
-
-SELECT *
-FROM Sales.Orders
+SELECT * 
+FROM formation_sql.Orders
 WHERE OrderStatus = 'Delivered';
 
-CREATE NONCLUSTERED INDEX Idx_Orders_OrderStatus ON Sales.Orders(OrderStatus)
+-- Index améliore la recherche sur la colonne
+CREATE NONCLUSTERED INDEX Idx_Orders_OrderStatus 
+ON formation_sql.Orders(OrderStatus);
 
-/* ==============================================================================
-   Tip 5: Avoid applying functions to columns in WHERE clauses
-===============================================================================*/
+-- ============================================
+-- 5. Ne pas appliquer de fonctions sur les colonnes dans WHERE
+-- ============================================
 
--- Bad Practice
-SELECT * FROM Sales.Orders 
-WHERE LOWER(OrderStatus) = 'delivered'
+-- Mauvaise pratique : empêche l'utilisation d'index
+SELECT * FROM formation_sql.Orders 
+WHERE LOWER(OrderStatus) = 'delivered';
 
--- Good Practice
-SELECT * FROM Sales.Orders 
-WHERE OrderStatus = 'Delivered'
----------------------------------------------------------
--- Bad Practice
-SELECT * 
-FROM Sales.Customers
-WHERE SUBSTRING(FirstName, 1, 1) = 'A'
+-- Bonne pratique : utilise directement la colonne indexée
+SELECT * FROM formation_sql.Orders 
+WHERE OrderStatus = 'Delivered';
 
--- Good Practice
-SELECT * 
-FROM Sales.Customers
-WHERE FirstName LIKE 'A%'
----------------------------------------------------------
--- Bad Practice
-SELECT * 
-FROM Sales.Orders 
-WHERE YEAR(OrderDate) = 2025
+-- Mauvaise pratique : SUBSTRING empêche l'index
+SELECT * FROM formation_sql.Customers
+WHERE SUBSTRING(FirstName, 1, 1) = 'A';
 
--- Good Practice
-SELECT * 
-FROM Sales.Orders 
-WHERE OrderDate BETWEEN '2025-01-01' AND '2025-12-31'
+-- Bonne pratique : LIKE permet l'index
+SELECT * FROM formation_sql.Customers
+WHERE FirstName LIKE 'A%';
 
-/* ==============================================================================
-   Tip 6: Avoid leading wildcards as they prevent index usage
-===============================================================================*/
+-- Mauvaise pratique : YEAR(OrderDate) empêche l'index
+SELECT * FROM formation_sql.Orders 
+WHERE YEAR(OrderDate) = 2025;
 
--- Bad Practice
-SELECT * 
-FROM Sales.Customers 
-WHERE LastName LIKE '%Gold%'
+-- Bonne pratique : BETWEEN permet l'utilisation d'index
+SELECT * FROM formation_sql.Orders 
+WHERE OrderDate BETWEEN '2025-01-01' AND '2025-12-31';
 
--- Good Practice
-SELECT * 
-FROM Sales.Customers 
-WHERE LastName LIKE 'Gold%'
+-- ============================================
+-- 6. Éviter les jokers au début (LIKE '%abc')
+-- ============================================
 
-/* ==============================================================================
-   Tip 7: Use IN instead of Multiple OR
-===============================================================================*/
+-- Mauvaise pratique : ne peut pas utiliser l'index
+SELECT * FROM formation_sql.Customers 
+WHERE LastName LIKE '%Gold%';
 
--- Bad Practice
-SELECT * 
-FROM Sales.Orders
-WHERE CustomerID = 1 OR CustomerID = 2 OR CustomerID = 3
+-- Bonne pratique : index utilisé
+SELECT * FROM formation_sql.Customers 
+WHERE LastName LIKE 'Gold%';
 
--- Good Practice
-SELECT * 
-FROM Sales.Orders
-WHERE CustomerID IN (1, 2, 3)
+-- ============================================
+-- 7. Utiliser IN au lieu de plusieurs OR
+-- ============================================
 
--- #######################################################
--- #                        JOINS                        #
--- #######################################################
+-- Mauvaise pratique
+SELECT * FROM formation_sql.Orders
+WHERE CustomerID = 1 OR CustomerID = 2 OR CustomerID = 3;
 
-/* ==============================================================================
-   Tip 8: Understand The Speed of Joins & Use INNER JOIN when possible
-===============================================================================*/
+-- Bonne pratique
+SELECT * FROM formation_sql.Orders
+WHERE CustomerID IN (1,2,3);
 
--- Best Performance
-SELECT c.FirstName, o.OrderID FROM Sales.Customers c INNER JOIN Sales.Orders o ON c.CustomerID = o.CustomerID
 
--- Slightly Slower Performance
-SELECT c.FirstName, o.OrderID FROM Sales.Customers c RIGHT JOIN Sales.Orders o ON c.CustomerID = o.CustomerID
-SELECT c.FirstName, o.OrderID FROM Sales.Customers c LEFT JOIN Sales.Orders o ON c.CustomerID = o.CustomerID
+-- ###############################################################
+-- #                        3. JOINTURES                        #
+-- ###############################################################
 
--- Worst Performance
-SELECT c.FirstName, o.OrderID FROM Sales.Customers c OUTER JOIN Sales.Orders o ON c.CustomerID = o.CustomerID
+-- ============================================
+-- 8. Comprendre la vitesse des jointures
+-- ============================================
 
-/* ==============================================================================
-   Tip 9: Use Explicit Join (ANSI Join) Instead of Implicit Join (non-ANSI Join)
-===============================================================================*/
+-- INNER JOIN plus rapide, plus simple pour optimiser
+SELECT c.FirstName, o.OrderID 
+FROM formation_sql.Customers c
+INNER JOIN formation_sql.Orders o ON c.CustomerID = o.CustomerID;
 
--- Bad Practice
+-- RIGHT ou LEFT JOIN : légèrement plus lent
+SELECT c.FirstName, o.OrderID 
+FROM formation_sql.Customers c
+RIGHT JOIN formation_sql.Orders o ON c.CustomerID = o.CustomerID;
+
+SELECT c.FirstName, o.OrderID 
+FROM formation_sql.Customers c
+LEFT JOIN formation_sql.Orders o ON c.CustomerID = o.CustomerID;
+
+-- OUTER JOIN : plus lent, plus de lignes générées
+SELECT c.FirstName, o.OrderID 
+FROM formation_sql.Customers c
+FULL OUTER JOIN formation_sql.Orders o ON c.CustomerID = o.CustomerID;
+
+-- ============================================
+-- 9. Utiliser les jointures explicites (ANSI)
+-- ============================================
+
+-- Mauvaise pratique : jointure implicite (ancienne syntaxe)
 SELECT o.OrderID, c.FirstName
-FROM Sales.Customers c, Sales.Orders o
-WHERE c.CustomerID = o.CustomerID
+FROM formation_sql.Customers c, formation_sql.Orders o
+WHERE c.CustomerID = o.CustomerID;
 
--- Good Practice
+-- Bonne pratique : jointure ANSI claire, plus facile à optimiser
 SELECT o.OrderID, c.FirstName
-FROM Sales.Customers AS c
-INNER JOIN Sales.Orders AS o
+FROM formation_sql.Customers AS c
+INNER JOIN formation_sql.Orders AS o
     ON c.CustomerID = o.CustomerID;
 
---For simple queries: There is no measurable performance difference if both ANSI and non-ANSI queries are correctly written.
---For complex queries: ANSI joins are usually easier to optimize and debug because their structure makes the intent of the query clearer.
-
-/* ==============================================================================
-   Tip 10: Make sure to Index the columns used in the ON clause
-===============================================================================*/
+-- ============================================
+-- 10. Indexer les colonnes utilisées dans ON
+-- ============================================
 
 SELECT c.FirstName, o.OrderID
-FROM Sales.Orders AS o
-INNER JOIN Sales.Customers AS c
+FROM formation_sql.Orders AS o
+INNER JOIN formation_sql.Customers AS c
     ON c.CustomerID = o.CustomerID;
 
-CREATE NONCLUSTERED INDEX IX_Orders_CustomerID ON Sales.Orders(CustomerID)
+-- Index pour accélérer la jointure
+CREATE NONCLUSTERED INDEX IX_Orders_CustomerID ON formation_sql.Orders(CustomerID);
 
-/* ==============================================================================
-   Tip 11: Filter Before Joining (Big Tables)
-===============================================================================*/
+-- ============================================
+-- 11. Filtrer avant de joindre (grandes tables)
+-- ============================================
 
--- Best Practice For Small-Medium Tables
--- Filter After Join (WHERE)
+-- Petite table : filtrer après la jointure
 SELECT c.FirstName, o.OrderID
-FROM Sales.Customers AS c
-INNER JOIN Sales.Orders AS o
+FROM formation_sql.Customers AS c
+INNER JOIN formation_sql.Orders AS o
     ON c.CustomerID = o.CustomerID
 WHERE o.OrderStatus = 'Delivered';
 
--- Filter During Join (ON)
+-- Filtrer pendant la jointure (meilleure pratique)
 SELECT c.FirstName, o.OrderID
-FROM Sales.Customers AS c
-INNER JOIN Sales.Orders AS o
+FROM formation_sql.Customers AS c
+INNER JOIN formation_sql.Orders AS o
     ON c.CustomerID = o.CustomerID
    AND o.OrderStatus = 'Delivered';
 
--- Best Practice For Big Tables
--- Filter Before Join (SUBQUERY)
+-- Grandes tables : filtrer dans une sous-requête
 SELECT c.FirstName, o.OrderID
-FROM Sales.Customers AS c
+FROM formation_sql.Customers AS c
 INNER JOIN (
     SELECT OrderID, CustomerID
-    FROM Sales.Orders
+    FROM formation_sql.Orders
     WHERE OrderStatus = 'Delivered'
 ) AS o
     ON c.CustomerID = o.CustomerID;
 
-/* ==============================================================================
-   Tip 12: Aggregate Before Joining (Big Tables)
-===============================================================================*/
+-- ============================================
+-- 12. Agréger avant de joindre (grandes tables)
+-- ============================================
 
--- Best Practice For Small-Medium Tables
--- Grouping and Joining
+-- Petite table : agrégation après jointure
 SELECT c.CustomerID, c.FirstName, COUNT(o.OrderID) AS OrderCount
-FROM Sales.Customers AS c
-INNER JOIN Sales.Orders AS o
+FROM formation_sql.Customers AS c
+INNER JOIN formation_sql.Orders AS o
     ON c.CustomerID = o.CustomerID
 GROUP BY c.CustomerID, c.FirstName;
 
--- Best Practice For Big Tables
--- Pre-aggregated Subquery
+-- Grande table : agrégation avant jointure (sous-requête)
 SELECT c.CustomerID, c.FirstName, o.OrderCount
-FROM Sales.Customers AS c
+FROM formation_sql.Customers AS c
 INNER JOIN (
     SELECT CustomerID, COUNT(OrderID) AS OrderCount
-    FROM Sales.Orders
+    FROM formation_sql.Orders
     GROUP BY CustomerID
 ) AS o
     ON c.CustomerID = o.CustomerID;
 
--- Bad Practice
--- Correlated Subquery
-SELECT 
-    c.CustomerID, 
-    c.FirstName,
-    (SELECT COUNT(o.OrderID)
-     FROM Sales.Orders AS o
-     WHERE o.CustomerID = c.CustomerID) AS OrderCount
-FROM Sales.Customers AS c;
+-- Mauvaise pratique : sous-requête corrélée coûteuse
+SELECT c.CustomerID, c.FirstName,
+       (SELECT COUNT(o.OrderID)
+        FROM formation_sql.Orders AS o
+        WHERE o.CustomerID = c.CustomerID) AS OrderCount
+FROM formation_sql.Customers AS c;
 
-/* ==============================================================================
-   Tip 13: Use Union Instead of OR in Joins
-===============================================================================*/
+-- ============================================
+-- 13. Utiliser UNION au lieu de OR dans les jointures
+-- ============================================
 
--- Bad Practice
+-- Mauvaise pratique : OR complexe
 SELECT o.OrderID, c.FirstName
-FROM Sales.Customers AS c
-INNER JOIN Sales.Orders AS o
+FROM formation_sql.Customers AS c
+INNER JOIN formation_sql.Orders AS o
     ON c.CustomerID = o.CustomerID
     OR c.CustomerID = o.SalesPersonID;
 
--- Best Practice
+-- Bonne pratique : UNION clair et performant
 SELECT o.OrderID, c.FirstName
-FROM Sales.Customers AS c
-INNER JOIN Sales.Orders AS o
+FROM formation_sql.Customers AS c
+INNER JOIN formation_sql.Orders AS o
     ON c.CustomerID = o.CustomerID
 UNION
 SELECT o.OrderID, c.FirstName
-FROM Sales.Customers AS c
-INNER JOIN Sales.Orders AS o
+FROM formation_sql.Customers AS c
+INNER JOIN formation_sql.Orders AS o
     ON c.CustomerID = o.SalesPersonID;
 
-/* ==============================================================================
-   Tip 14: Check for Nested Loops and Use SQL HINTS
-===============================================================================*/
+-- ###############################################################
+-- #                        4. UNION                             #
+-- ###############################################################
 
-SELECT o.OrderID, c.FirstName
-FROM Sales.Customers c
-INNER JOIN Sales.Orders o 
-ON c.CustomerID = o.CustomerID
+-- ============================================
+-- 14. Utiliser UNION ALL si les doublons sont acceptables
+-- ============================================
 
--- Good Practice for Having Big Table & Small Table
-SELECT o.OrderID, c.FirstName
-FROM Sales.Customers AS c
-INNER JOIN Sales.Orders AS o
-    ON c.CustomerID = o.CustomerID
-OPTION (HASH JOIN);
-
--- ################################################################
--- #                           UNION                              #
--- ################################################################
-
-/* ==============================================================================
-   Tip 15: Use UNION ALL instead of using UNION | duplicates are acceptable
-===============================================================================*/
-
--- Bad Practice
-SELECT CustomerID FROM Sales.Orders
+-- Mauvaise pratique : UNION élimine les doublons, plus coûteux
+SELECT CustomerID FROM formation_sql.Orders
 UNION
-SELECT CustomerID FROM Sales.OrdersArchive 
+SELECT CustomerID FROM formation_sql.OrdersArchive;
 
--- Best Practice
-SELECT CustomerID FROM Sales.Orders
+-- Bonne pratique : UNION ALL plus rapide
+SELECT CustomerID FROM formation_sql.Orders
 UNION ALL
-SELECT CustomerID FROM Sales.OrdersArchive 
+SELECT CustomerID FROM formation_sql.OrdersArchive;
 
-/* =======================================================================================
-   Tip 16: Use UNION ALL + Distinct instead of using UNION | duplicates are not acceptable
-========================================================================================*/
+-- ============================================
+-- 15. UNION ALL + DISTINCT si les doublons ne sont pas acceptables
+-- ============================================
 
--- Bad Practice
-SELECT CustomerID FROM Sales.Orders
+-- Mauvaise pratique : UNION coûteux
+SELECT CustomerID FROM formation_sql.Orders
 UNION
-SELECT CustomerID FROM Sales.OrdersArchive 
+SELECT CustomerID FROM formation_sql.OrdersArchive;
 
--- Best Practice
+-- Bonne pratique : UNION ALL + DISTINCT performant
 SELECT DISTINCT CustomerID
 FROM (
-    SELECT CustomerID FROM Sales.Orders
+    SELECT CustomerID FROM formation_sql.Orders
     UNION ALL
-    SELECT CustomerID FROM Sales.OrdersArchive
-) AS CombinedData
+    SELECT CustomerID FROM formation_sql.OrdersArchive
+) AS CombinedData;
 
 
--- ##########################################################
--- #                     AGGREGATIONS                       #
--- ##########################################################
+-- ###############################################################
+-- #                      5. AGRÉGATIONS                        #
+-- ###############################################################
 
-/* ==============================================================================
-   Tip 17: Use Columnstore Index for Aggregations on Large Table
-===============================================================================*/
+-- ============================================
+-- 16. Utiliser Columnstore Index pour les agrégations sur grandes tables
+-- ============================================
 
 SELECT CustomerID, COUNT(OrderID) AS OrderCount
-FROM Sales.Orders 
-GROUP BY CustomerID
+FROM formation_sql.Orders 
+GROUP BY CustomerID;
 
-CREATE CLUSTERED COLUMNSTORE INDEX Idx_Orders_Columnstore ON Sales.Orders
-
-/* ==============================================================================
-   Tip 18: Pre-Aggregate Data and store it in new Table for Reporting
-===============================================================================*/
-
-SELECT MONTH(OrderDate) OrderYear, SUM(Sales) AS TotalSales
-INTO Sales.SalesSummary
-FROM Sales.Orders
-GROUP BY MONTH(OrderDate)
-
-SELECT OrderYear, TotalSales FROM Sales.SalesSummary
+CREATE CLUSTERED COLUMNSTORE INDEX Idx_Orders_Columnstore 
+ON formation_sql.Orders;
 
 
--- ##############################################################
--- #                       SUBQUERIES, CTE                      #
--- ##############################################################
+-- ###############################################################
+-- #                  6. SOUS-REQUÊTES / CTE                     #
+-- ###############################################################
 
-/* ==============================================================================
-   Tip 19: JOIN vs EXISTS vs IN (Avoid using IN)
-===============================================================================*/
+-- ============================================
+-- 17. JOIN vs EXISTS vs IN (éviter IN)
+-- ============================================
 
--- JOIN (Best Practice: If the Performance equals to EXISTS)
+-- JOIN (bonne pratique si performances équivalentes)
 SELECT o.OrderID, o.Sales
-FROM Sales.Orders AS o
-INNER JOIN Sales.Customers AS c
+FROM formation_sql.Orders AS o
+INNER JOIN formation_sql.Customers AS c
     ON o.CustomerID = c.CustomerID
 WHERE c.Country = 'USA';
 
--- EXISTS (Best Practice: Use it for Large Tables)
+-- EXISTS (bonne pratique pour grandes tables)
 SELECT o.OrderID, o.Sales
-FROM Sales.Orders AS o
+FROM formation_sql.Orders AS o
 WHERE EXISTS (
     SELECT 1
-    FROM Sales.Customers AS c
+    FROM formation_sql.Customers AS c
     WHERE c.CustomerID = o.CustomerID
       AND c.Country = 'USA'
 );
 
--- IN (Bad Practice)
+-- IN (mauvaise pratique)
 SELECT o.OrderID, o.Sales
-FROM Sales.Orders AS o
+FROM formation_sql.Orders AS o
 WHERE o.CustomerID IN (
     SELECT CustomerID
-    FROM Sales.Customers
+    FROM formation_sql.Customers
     WHERE Country = 'USA'
 );
 
-/* ==============================================================================
-   Tip 20: Avoid Redundant Logic in Your Query
-===============================================================================*/
+-- ============================================
+-- 18. Éviter la logique redondante
+-- ============================================
 
--- Bad Practice
+-- Mauvaise pratique : double sous-requête
 SELECT EmployeeID, FirstName, 'Above Average' AS Status
-FROM Sales.Employees
-WHERE Salary > (SELECT AVG(Salary) FROM Sales.Employees)
+FROM formation_sql.Employees
+WHERE Salary > (SELECT AVG(Salary) FROM formation_sql.Employees)
 UNION ALL
 SELECT EmployeeID, FirstName, 'Below Average' AS Status
-FROM Sales.Employees
-WHERE Salary < (SELECT AVG(Salary) FROM Sales.Employees);
+FROM formation_sql.Employees
+WHERE Salary < (SELECT AVG(Salary) FROM formation_sql.Employees);
 
--- Good Practice
-SELECT 
-    EmployeeID, 
-    FirstName, 
-    CASE 
-        WHEN Salary > AVG(Salary) OVER () THEN 'Above Average'
-        WHEN Salary < AVG(Salary) OVER () THEN 'Below Average'
-        ELSE 'Average'
-    END AS Status
-FROM Sales.Employees;
+-- Bonne pratique : CASE + AVG() OVER () simplifie et accélère
+SELECT EmployeeID, FirstName, 
+       CASE 
+           WHEN Salary > AVG(Salary) OVER () THEN 'Above Average'
+           WHEN Salary < AVG(Salary) OVER () THEN 'Below Average'
+           ELSE 'Average'
+       END AS Status
+FROM formation_sql.Employees;
 
--- ##############################################################
--- #                             DDL                            #
--- ##############################################################
-/*
-=============================================================================
-Tip 21: Avoid VARCHAR Data Type If Possible
-=============================================================================
-Tip 22: Avoid Using MAX or Overly Large Lengths
-=============================================================================
-Tip 23: Use NOT NULL If possible 
-=============================================================================
-Tip 24: Make sure all tables have a CLUSTERED PRIMARY KEY
-=============================================================================
-Tip 25: Creeate Nonclustered Index on Foreign Key if they are frequently used
-=============================================================================
-*/
--- Bad Practice 
+
+-- ###############################################################
+-- #                           7. DDL                             #
+-- ###############################################################
+
+-- ============================================
+-- 19. Types et clés
+-- ============================================
+
+-- Mauvaise pratique : types trop grands et TEXT
 CREATE TABLE CustomersInfo (
     CustomerID INT,
     FirstName VARCHAR(MAX),
@@ -433,10 +374,10 @@ CREATE TABLE CustomersInfo (
     BirthDate VARCHAR(255),
     EmployeeID INT,
     CONSTRAINT FK_Bad_Customers_EmployeeID FOREIGN KEY (EmployeeID)
-        REFERENCES Sales.Employees(EmployeeID)
+        REFERENCES formation_sql.Employees(EmployeeID)
 );
 
--- Good Practice Practice 
+-- Bonne pratique : types corrects, NOT NULL, clé primaire
 CREATE TABLE CustomersInfo (
     CustomerID INT PRIMARY KEY CLUSTERED,
     FirstName VARCHAR(50) NOT NULL,
@@ -447,25 +388,23 @@ CREATE TABLE CustomersInfo (
     BirthDate DATE,
     EmployeeID INT,
     CONSTRAINT FK_CustomersInfo_EmployeeID FOREIGN KEY (EmployeeID)
-        REFERENCES Sales.Employees(EmployeeID)
+        REFERENCES formation_sql.Employees(EmployeeID)
 );
+
 CREATE NONCLUSTERED INDEX IX_CustomersInfo_EmployeeID
 ON CustomersInfo(EmployeeID);
 
--- ##############################################################
--- #                        INDEXING                            #
--- ##############################################################
-/*
-=================================================================================================================================
-Tip 26: Avoid Over Indexing, as it can slow down insert, update, and delete operations
-=================================================================================================================================
-Tip 27: Regularly review and drop unused indexes to save space and improve write performance
-=================================================================================================================================
-Tip 28: Update table statistics weekly to ensure the query optimizer has the most up-to-date information
-=================================================================================================================================
-Tip 29: Reorganize and rebuild fragmented indexes weekly to maintain query performance.
-=================================================================================================================================
-Tip 30: For large tables (e.g., fact tables), partition the data and then apply a columnstore index for best performance results
-=================================================================================================================================
-*/
 
+-- ###############################################################
+-- #                         8. INDEXATION                        #
+-- ###############################################################
+
+-- ============================================
+-- 20. Index et maintenance
+-- ============================================
+
+-- Éviter trop d'index : ralentit insert/update/delete
+-- Supprimer les index inutilisés régulièrement
+-- Mettre à jour les statistiques chaque semaine
+-- Réorganiser et reconstruire les index fragmentés
+-- Pour grandes tables : partition + columnstore index
