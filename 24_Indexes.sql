@@ -1,3 +1,38 @@
+/*
+RÔLE DES INDEX DANS POSTGRESQL
+
+Les index servent à accélérer l’accès aux données en évitant
+le parcours complet des tables (sequential scan).
+
+Sans index :
+- PostgreSQL parcourt toute la table → lent sur les grosses tables
+
+Avec index :
+- Accès direct aux lignes recherchées → beaucoup plus rapide
+
+Ils améliorent les performances des requêtes utilisant :
+- WHERE
+- JOIN
+- ORDER BY
+- GROUP BY
+- DISTINCT
+- contraintes PRIMARY KEY et UNIQUE
+
+Types d’index courants :
+- B-tree (par défaut) : =, <, >, BETWEEN
+- Hash : égalité stricte
+- GIN : tableaux, JSONB, full-text search
+- GiST : données géométriques, recherche floue
+- BRIN : très grosses tables avec données ordonnées
+
+Inconvénients :
+- Occupent de l’espace disque
+- Ralentissent INSERT / UPDATE / DELETE
+- Trop d’index peut nuire aux performances
+
+Règle d’or :
+Indexer ce qui est souvent lu, pas ce qui est souvent écrit.
+*/
 -- ============================================================================
 -- INDEX B-TREE (équivalent non-clustered par défaut)
 -- ============================================================================
@@ -131,4 +166,5 @@ WHERE country = 'USA';
 CREATE INDEX idx_customers_country_usa
 ON formation_sql.customers (country)
 WHERE country = 'USA';
+
 
