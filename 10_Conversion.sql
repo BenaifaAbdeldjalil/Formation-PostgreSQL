@@ -14,10 +14,11 @@ SELECT
     '2025-08-20'::DATE        AS texte_vers_date_court;
 
 
-/* ==============================================================================
-   2. CAST TIMESTAMP → DATE
-   (suppression de l’heure)
-============================================================================== */
+SELECT
+    creationtime,
+    CAST(creationtime AS DATE) AS date_sans_heure
+FROM orders;
+
 
 SELECT
     creationtime,
@@ -27,12 +28,24 @@ FROM orders;
 
 
 /* ==============================================================================
+   2. CAST DATE → TIMESTAMP  
+   (suppression de l’heure)
+============================================================================== */
+
+select
+	orderdate,
+    CAST(orderdate AS timestamp) AS date_sans_heure,
+    orderdate::timestamp         AS date_sans_heure_court
+FROM orders;
+
+
+/* ==============================================================================
    3. CAST DATE → TEXTE (avec format)
 ============================================================================== */
 
 SELECT
-    creationtime,
-    TO_CHAR(creationtime::DATE, 'DD/MM/YYYY') AS date_affichee
+    orderdate,
+    TO_CHAR(orderdate::DATE, 'DD/MM/YYYY') AS date_affichee
 FROM orders;
 
 
@@ -42,7 +55,8 @@ FROM orders;
 
 SELECT
     orderdate,
-    (orderdate + INTERVAL '7 days')::DATE AS date_plus_7
+    (orderdate + INTERVAL '7 days')::DATE AS date_plus_7,
+    orderdate + INTERVAL '10 days' AS date_plus_10
 FROM orders;
 
 
