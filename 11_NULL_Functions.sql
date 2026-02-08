@@ -20,18 +20,13 @@ FROM formation_sql.customers
 where FirstName is null;*/
 
 ------ les non nulls
-SELECT
-    FirstName,
-    LastName
-FROM formation_sql.customers
-where LastName <> 'null';
 
 /*
 SELECT
     FirstName,
     LastName
 FROM formation_sql.customers
-where FirstName is not null;*/
+where LastName is not null;*/
 
 
 /* ==============================================================================
@@ -51,21 +46,21 @@ COALESCE('Premier', NULL, 'Troisième'),-- → 'Premier'*/
 
 
 -- Donner une valeur par défaut si NULL
-SELECT COALESCE(managerid, 0) FROM employees;
+SELECT *,COALESCE(managerid, 0) FROM employees;
 ---0
 -- Choisir entre plusieurs colonnes
-SELECT COALESCE(lastname,firstname,country, 'aucun@email.com') FROM formation_sql.customers;
+SELECT *,COALESCE(lastname,firstname,country, 'aucun@email.com') FROM formation_sql.customers;
 --Algeria
 --Mary
 
 -- Priorité de sources
-SELECT COALESCE("name",address) FROM formation_sql.client;
+SELECT *,COALESCE("name",address) FROM formation_sql.client;
 
 ---EXEMPLE--
 SELECT
     FirstName,
     LastName,
-    FirstName || ' ' || COALESCE(LastName, '') AS FullName,
+    FirstName || ' - ' || COALESCE(LastName, '') AS FullName,
     Score,
     COALESCE(Score, 0) + 10 AS ScoreWithBonus
 FROM formation_sql.customers;
@@ -78,7 +73,7 @@ FROM formation_sql.customers;
 NULLIF(valeur1, valeur2)
 
 -- Exemples
-NULLIF(10, 10) → NULL
+NULLIF(a, 10) → NULL
 NULLIF(10, 20) → 10
 NULLIF('A', 'A') → NULL
 NULLIF('A', 'B') → 'A'
@@ -87,12 +82,14 @@ NULLIF('A', 'B') → 'A'
 ---Cas d'utilisation :
 -- Éviter la division par zéro
 SELECT salary / NULLIF(managerid, 0) FROM employees;
+------ sans 
+SELECT salary / managerid FROM employees;
 
 -- Ignorer les valeurs par défaut
-SELECT NULLIF(orderstatus, 'N/A') FROM orders;
+SELECT *,NULLIF(orderstatus, 'N/A') FROM orders;
 
 -- Traiter les doublons spéciaux
-SELECT NULLIF(orderstatus, 'UNKNOWN') FROM formation_sql.orders;
+SELECT *,NULLIF(orderstatus, 'UNKNOWN') FROM formation_sql.orders;
 
 /* ==============================================================================
 ---IS DISTINCT FROM et IS NOT DISTINCT FROM
@@ -109,7 +106,7 @@ SELECT * FROM table WHERE col1 IS DISTINCT FROM col2;
 SELECT * FROM employees 
 WHERE salary <> old_salary;
 
-----
+---- gere les null
 SELECT * FROM employees 
 WHERE salary IS DISTINCT FROM old_salary;
 
@@ -153,10 +150,10 @@ FROM Orders;
 -- Agréger seulement certaines lignes
 SELECT 
     department,
-    AVG(salary) FILTER (WHERE old_salary IS NOT NULL) as moyenne_avec_bonus,
-    AVG(salary) FILTER (WHERE old_salary IS NULL) as moyenne_sans_bonus
+    AVG(salary) FILTER (WHERE old_salary IS NOT NULL) as moyenne_avec_bonus, --- Uniquement pour les employés qui ont un ancien salaire
+    AVG(salary) FILTER (WHERE old_salary IS NULL) as moyenne_sans_bonus,  -- Uniquement pour les employés sans ancien salaire
+    AVG(salary) as moyenne --- Calcule la moyenne globale des salaires
 FROM employees
 GROUP BY department;
-
 
 
