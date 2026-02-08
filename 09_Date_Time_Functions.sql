@@ -1,5 +1,10 @@
 /* ==============================================================================
    POSTGRESQL – FONCTIONS DATE & HEURE (AVEC EXPLICATIONS)
+   
+   NOW() AS now_timestamp,             -- Renvoie la date et l’heure actuelles (avec timezone)
+   CURRENT_DATE AS current_date,        -- Renvoie uniquement la date du jour
+   CURRENT_TIME AS current_time,        -- Renvoie uniquement l’heure actuelle
+   CURRENT_TIMESTAMP AS current_timestamp -- Équivalent standard SQL de NOW()
 =============================================================================== */
 
 /* ==============================================================================
@@ -94,10 +99,10 @@ FROM orders;
 SELECT
     EXTRACT(YEAR FROM order_date) AS order_year
     -- Récupère l’année de la date de commande
-FROM sales.orders;
+FROM  orders;
 
 SELECT *
-FROM sales.orders
+FROM  orders
 WHERE EXTRACT(MONTH FROM order_date) = 2;
 -- Filtre uniquement les commandes du mois de février
 
@@ -120,7 +125,7 @@ SELECT
 
     TO_CHAR(creation_time, 'FMDay FMMonth') AS date_lisible
     -- Affichage lisible sans espaces (FM = Fill Mode)
-FROM sales.orders;
+FROM  orders;
 
 /* ==============================================================================
    7. CAST() – CONVERSION DE TYPES
@@ -142,14 +147,14 @@ SELECT
     order_date,
     order_date + INTERVAL '10 days' AS nouvelle_date
     -- Ajoute 10 jours à la date
-FROM sales.orders;
+FROM  orders;
 
 SELECT
     order_date,
     order_date + INTERVAL '3 months' AS apres_3_mois,
     order_date + INTERVAL '1 year' AS apres_1_an
     -- Ajoute des mois et des années
-FROM sales.orders;
+FROM  orders;
 
 /* ==============================================================================
    9. CALCUL DES DIFFÉRENCES DE DATES
