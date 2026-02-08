@@ -1,206 +1,115 @@
 /* ==============================================================================
-   SQL Window Aggregate Functions
+   PARTIE CONTRAINTES EN POSTGRESQL
 -------------------------------------------------------------------------------
-   These functions allow you to perform aggregate calculations over a set 
-   of rows without the need for complex subqueries. They enable you to compute 
-   counts, sums, averages, minimums, and maximums while still retaining access 
-   to individual row details.
+   Ce script couvre :
+     1. Théorie des contraintes
+     2. Création des tables avec contraintes
+     3. Ajout de contraintes sur des tables existantes
+     4. Exemples d'insertion valides et invalides
+=============================================================================== */
 
-   Table of Contents:
-    1. COUNT
-    2. SUM
-    3. AVG
-    4. MAX / MIN
-    5. ROLLING SUM & AVERAGE Use Case
+/* ==============================================================================
+   1. Théorie des contraintes
 ===============================================================================
-*/
 
-/* ============================================================
-   SQL WINDOW AGGREGATION | COUNT
-   ============================================================ */
+Contraintes courantes dans PostgreSQL :
 
-/* TASK 1:
-   Find the Total Number of Orders and the Total Number of Orders for Each Customer
-*/
-SELECT
-    OrderID,
-    OrderDate,
-    CustomerID,
-    COUNT(*) OVER() AS TotalOrders,
-    COUNT(*) OVER(PARTITION BY CustomerID) AS OrdersByCustomers
-FROM Sales.Orders
+1. PRIMARY KEY : Identifie de manière unique chaque ligne d'une table.
+   - Une table ne peut avoir qu'une seule clé primaire.
+   - Les colonnes de la clé primaire sont implicitement NOT NULL.
 
-/* TASK 2:
-   - Find the Total Number of Customers
-   - Find the Total Number of Scores for Customers
-   - Find the Total Number of Countries
-*/
-SELECT
-    *,
-    COUNT(*) OVER () AS TotalCustomersStar,
-    COUNT(1) OVER () AS TotalCustomersOne,
-    COUNT(Score) OVER() AS TotalScores,
-    COUNT(Country) OVER() AS TotalCountries
-FROM Sales.Customers
+2. FOREIGN KEY : Assure l'intégrité référentielle entre deux tables.
+   - Une colonne ou un groupe de colonnes doit correspondre à une clé primaire ou unique dans une autre table.
 
-/* TASK 3:
-   Check whether the table 'OrdersArchive' contains any duplicate rows
-*/
-SELECT 
-    * 
-FROM (
-    SELECT 
-        *,
-        COUNT(*) OVER(PARTITION BY OrderID) AS CheckDuplicates
-    FROM Sales.OrdersArchive
-) t
-WHERE CheckDuplicates > 1
+3. UNIQUE : Garantit que toutes les valeurs dans une colonne ou un ensemble de colonnes sont uniques.
 
-/* ============================================================
-   SQL WINDOW AGGREGATION | SUM
-   ============================================================ */
+4. NOT NULL : Empêche l’insertion de valeurs NULL dans une colonne.
 
-/* TASK 4:
-   - Find the Total Sales Across All Orders 
-   - Find the Total Sales for Each Product
-*/
-SELECT
-    OrderID,
-    OrderDate,
-    Sales,
-    ProductID,
-    SUM(Sales) OVER () AS TotalSales,
-    SUM(Sales) OVER (PARTITION BY ProductID) AS SalesByProduct
-FROM Sales.Orders
+5. CHECK : Permet de définir une condition qui doit être vraie pour chaque ligne insérée.
 
-/* TASK 5:
-   Find the Percentage Contribution of Each Product's Sales to the Total Sales
-*/
-SELECT
-    OrderID,
-    ProductID,
-    Sales,
-    SUM(Sales) OVER () AS TotalSales,
-    ROUND(CAST(Sales AS FLOAT) / SUM(Sales) OVER () * 100, 2) AS PercentageOfTotal
-FROM Sales.Orders
+6. DEFAULT : Permet de définir une valeur par défaut si aucune valeur n’est fournie à l’insertion.
 
-/* ============================================================
-   SQL WINDOW AGGREGATION | AVG
-   ============================================================ */
+==============================================================================*/
 
-/* TASK 6:
-   - Find the Average Sales Across All Orders 
-   - Find the Average Sales for Each Product
-*/
-SELECT
-    OrderID,
-    OrderDate,
-    Sales,
-    ProductID,
-    AVG(Sales) OVER () AS AvgSales,
-    AVG(Sales) OVER (PARTITION BY ProductID) AS AvgSalesByProduct
-FROM Sales.Orders
+/* ==============================================================================
+   2. Création des tables avec contraintes
+=============================================================================== */
 
-/* TASK 7:
-   Find the Average Scores of Customers
-*/
-SELECT
-    CustomerID,
-    LastName,
-    Score,
-    COALESCE(Score, 0) AS CustomerScore,
-    AVG(Score) OVER () AS AvgScore,
-    AVG(COALESCE(Score, 0)) OVER () AS AvgScoreWithoutNull
-FROM Sales.Customers
+-- DROP TABLE si elle existe
+DROP TABLE IF EXISTS formation_sql.customers CASCADE;
+DROP TABLE IF EXISTS formation_sql.employees CASCADE;
 
-/* TASK 8:
-   Find all orders where Sales exceed the average Sales across all orders
-*/
-SELECT
-    *
-FROM (
-    SELECT
-        OrderID,
-        ProductID,
-        Sales,
-        AVG(Sales) OVER () AS Avg_Sales
-    FROM Sales.Orders
-) t 
-WHERE Sales > Avg_Sales
+-- Table Customers
+CREATE TABLE formation_sql.customers (
+    customerid INT NOT NULL,                 -- clé primaire
+    firstname VARCHAR(20) NOT NULL,          -- NOT NULL
+    lastname VARCHAR(20) NOT NULL,
+    country VARCHAR(7) DEFAULT 'FR',         -- valeur par défaut
+    score INT CHECK (score >= 0 AND score <= 100), -- CHECK constraint
+    CONSTRAINT customers_pkey PRIMARY KEY (customerid)
+);
 
-/* ============================================================
-   SQL WINDOW AGGREGATION | MAX / MIN
-   ============================================================ */
+-- Table Employees
+CREATE TABLE formation_sql.employees (
+    employeeid INT NOT NULL,
+    firstname VARCHAR(20) NOT NULL,
+    lastname VARCHAR(20) NOT NULL,
+    department VARCHAR(20) NOT NULL,
+    birthdate DATE NOT NULL,
+    gender CHAR(1) CHECK (gender IN ('M','F')), -- CHECK constraint
+    salary INT CHECK (salary > 0),
+    managerid INT,
+    old_salary INT,
+    CONSTRAINT employees_pkey PRIMARY KEY (employeeid),
+    CONSTRAINT fk_manager FOREIGN KEY (managerid) REFERENCES formation_sql.employees(employeeid)
+);
 
-/* TASK 9:
-   Find the Highest and Lowest Sales across all orders
-*/
-SELECT 
-    MIN(Sales) AS MinSales, 
-    MAX(Sales) AS MaxSales 
-FROM Sales.Orders
+/* ==============================================================================
+   3. Ajout de contraintes sur tables existantes
+=============================================================================== */
 
-/* TASK 10:
-   Find the Lowest Sales across all orders and by Product
-*/
-SELECT 
-    OrderID,
-    ProductID,
-    OrderDate,
-    Sales,
-    MIN(Sales) OVER () AS LowestSales,
-    MIN(Sales) OVER (PARTITION BY ProductID) AS LowestSalesByProduct
-FROM Sales.Orders
+-- Ajouter une clé étrangère pour lier un employé à un customer (exemple)
+ALTER TABLE formation_sql.customers
+ADD COLUMN account_manager_id INT;
 
-/* TASK 11:
-   Show the employees who have the highest salaries
-*/
-SELECT *
-FROM (
-	SELECT *,
-		   MAX(Salary) OVER() AS HighestSalary
-	FROM Sales.Employees
-) t
-WHERE Salary = HighestSalary
+ALTER TABLE formation_sql.customers
+ADD CONSTRAINT fk_account_manager FOREIGN KEY (account_manager_id)
+REFERENCES formation_sql.employees(employeeid);
 
-/* TASK 12:
-   Find the deviation of each Sale from the minimum and maximum Sales
-*/
-SELECT
-    OrderID,
-    OrderDate,
-    ProductID,
-    Sales,
-    MAX(Sales) OVER () AS HighestSales,
-    MIN(Sales) OVER () AS LowestSales,
-    Sales - MIN(Sales) OVER () AS DeviationFromMin,
-    MAX(Sales) OVER () - Sales AS DeviationFromMax
-FROM Sales.Orders
+-- Ajouter une contrainte UNIQUE sur firstname + lastname
+ALTER TABLE formation_sql.customers
+ADD CONSTRAINT unique_fullname UNIQUE (firstname, lastname);
 
-/* ============================================================
-   Use Case | ROLLING SUM & AVERAGE
-   ============================================================ */
+/* ==============================================================================
+   4. Exemples d'insertion valides et invalides
+=============================================================================== */
 
-/* TASK 13:
-   Calculate the moving average of Sales for each Product over time
-*/
-SELECT
-    OrderID,
-    ProductID,
-    OrderDate,
-    Sales,
-    AVG(Sales) OVER (PARTITION BY ProductID) AS AvgByProduct,
-    AVG(Sales) OVER (PARTITION BY ProductID ORDER BY OrderDate) AS MovingAvg
-FROM Sales.Orders
+-- ===================== INSERTIONS VALIDES =====================
+INSERT INTO formation_sql.employees (employeeid, firstname, lastname, department, birthdate, gender, salary)
+VALUES (1, 'Alice', 'Durand', 'IT', '1985-01-01', 'F', 4000);
 
-/* TASK 14:
-   Calculate the moving average of Sales for each Product over time,
-   including only the next order
-*/
-SELECT
-    OrderID,
-    ProductID,
-    OrderDate,
-    Sales,
-    AVG(Sales) OVER (PARTITION BY ProductID ORDER BY OrderDate ROWS BETWEEN CURRENT ROW AND 1 FOLLOWING) AS RollingAvg
-FROM Sales.Orders
+INSERT INTO formation_sql.employees (employeeid, firstname, lastname, department, birthdate, gender, salary, managerid)
+VALUES (2, 'Bob', 'Martin', 'IT', '1980-05-12', 'M', 4500, 1);
+
+INSERT INTO formation_sql.customers (customerid, firstname, lastname, country, score, account_manager_id)
+VALUES (101, 'Charlie', 'Dupont', 'FR', 80, 1);
+
+INSERT INTO formation_sql.customers (customerid, firstname, lastname, score)
+VALUES (102, 'David', 'Leclerc', 95);
+
+-- ===================== INSERTIONS INVALIDES =====================
+-- 1. Violation de PRIMARY KEY
+-- INSERT INTO formation_sql.customers (customerid, firstname, lastname) VALUES (101, 'Eve', 'Petit');
+
+-- 2. Violation de NOT NULL
+-- INSERT INTO formation_sql.customers (customerid, firstname, lastname) VALUES (103, NULL, 'Moreau');
+
+-- 3. Violation de CHECK
+-- INSERT INTO formation_sql.customers (customerid, firstname, lastname, score) VALUES (104, 'Fiona', 'Lemoine', 150);
+
+-- 4. Violation de FOREIGN KEY
+-- INSERT INTO formation_sql.customers (customerid, firstname, lastname, account_manager_id) VALUES (105, 'Gilles', 'Renard', 999);
+
+-- 5. Violation de UNIQUE
+-- INSERT INTO formation_sql.customers (customerid, firstname, lastname) VALUES (106, 'Charlie', 'Dupont');
+
