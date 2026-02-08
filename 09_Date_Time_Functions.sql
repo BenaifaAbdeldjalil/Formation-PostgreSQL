@@ -91,10 +91,15 @@ FROM orders;
 
 SELECT
     DATE_TRUNC('month', orderdate)
+        + INTERVAL '1 month' AS fin_du_mois
+FROM orders;
+
+--------
+SELECT
+    DATE_TRUNC('month', orderdate)
         + INTERVAL '1 month'
         - INTERVAL '1 day' AS fin_du_mois
 FROM orders;
-
 
 /* ==============================================================================
    8. DIFFÉRENCE ENTRE DEUX DATES
@@ -117,7 +122,22 @@ SELECT
     birthdate,
     AGE(NOW(), birthdate) AS age_exact
 FROM employees;
+-------------------
+SELECT
+    employeeid,
+    birthdate,
+    AGE(birthdate , NOW()) AS age_exact
+FROM employees;
 
+---------exemeple
+SELECT
+    orderid,
+    orderdate,
+    shipdate,
+    AGE(shipdate , orderdate) AS duree_livraison_age,
+    shipdate - orderdate AS duree_livraison
+FROM ordersarchive;
+---------------
 SELECT
     JUSTIFY_DAYS(INTERVAL '40 days') AS interval_normalise;
 
