@@ -14,12 +14,10 @@
      1. Types de résultats des sous-requêtes
      2. Sous-requête dans la clause FROM
      3. Sous-requête dans le SELECT
-     4. Sous-requête dans la clause JOIN
-     5. Sous-requête avec opérateurs de comparaison
-     6. Sous-requête avec IN
-     7. Sous-requête avec ANY
-     8. Sous-requête corrélée
-     9. Sous-requête avec EXISTS
+     4. Sous-requête avec opérateurs de comparaison
+     5. Sous-requête avec IN
+     6. Sous-requête avec ANY
+     7. Sous-requête avec EXISTS
 ===============================================================================
 */
 
@@ -35,38 +33,21 @@ SELECT
     AVG(Sales)
 FROM  Orders;
 
-/* Sous-requête ligne
-   ➜ Retourne une ou plusieurs lignes avec une seule colonne
-*/
-SELECT
-    CustomerID
-FROM  Orders;
-
-/* Sous-requête table
-   ➜ Retourne plusieurs lignes et colonnes
-*/
-SELECT
-    OrderID,
-    OrderDate
-FROM  Orders;
-
-/* ==============================================================================
-   SOUS-REQUÊTES | CLAUSE FROM
-===============================================================================*/
-
-/* TÂCHE 1 :
-   Trouver les produits dont le prix est supérieur au prix moyen
-   - La sous-requête calcule le prix moyen
-   - La requête principale filtre les produits au-dessus de cette moyenne
-*/
 
 SELECT
         ProductID,
         Price,
         AVG(Price) OVER () AS AvgPrice
     FROM  Product
-    where Price >AvgPrice; ------false
-/*
+    where Price > AvgPrice; ------false
+-----------------
+ SELECT
+        ProductID,
+        Price,
+        AVG(Price) OVER () AS AvgPrice
+    FROM  Product
+ ------------------   
+    
 SELECT
     *
 FROM (
@@ -76,7 +57,7 @@ FROM (
         AVG(Price) OVER () AS AvgPrice
     FROM  Product
 ) AS t
-WHERE Price > AvgPrice; */
+WHERE Price > AvgPrice; 
 
 ----------------------
 ----------------------
@@ -92,8 +73,7 @@ SELECT
     
     
  SELECT
-    *,
-    RANK() OVER (ORDER BY TotalSales DESC) AS CustomerRank
+    *
 FROM (
     SELECT
         CustomerID,
@@ -118,44 +98,6 @@ SELECT
     Price,
     (SELECT COUNT(*) FROM  Orders) AS TotalOrders
 FROM  Product;
-
-/* ==============================================================================
-   SOUS-REQUÊTES | CLAUSE JOIN
-===============================================================================*/
-
-/* ----------------------:
-   Afficher les clients avec leur chiffre d’affaires total
-   - La sous-requête agrège les ventes
-   - Le JOIN permet d’associer les résultats aux clients
-*/
-SELECT
-    c.*,
-    t.TotalSales
-FROM  Customers AS c
-LEFT JOIN (
-    SELECT
-        CustomerID,
-        SUM(Sales) AS TotalSales
-    FROM  Orders
-    GROUP BY CustomerID
-) AS t
-ON c.CustomerID = t.CustomerID;
-
-/* ----------------------:
-   Afficher les clients avec le nombre total de commandes
-*/
-SELECT
-    c.*,
-    o.TotalOrders
-FROM  Customers AS c
-LEFT JOIN (
-    SELECT
-        CustomerID,
-        COUNT(*) AS TotalOrders
-    FROM  Orders
-    GROUP BY CustomerID
-) AS o
-ON c.CustomerID = o.CustomerID;
 
 /* ==============================================================================
    SOUS-REQUÊTES | OPÉRATEURS DE COMPARAISON
@@ -205,7 +147,7 @@ WHERE CustomerID IN (
 SELECT
     *
 FROM  Orders
-WHERE CustomerID NOT IN (
+WHERE CustomerID IN (
     SELECT CustomerID
     FROM  Customers
     WHERE Country = 'Germany'
@@ -232,24 +174,6 @@ WHERE Gender = 'F'
   );
 
 /* ==============================================================================
-   SOUS-REQUÊTES CORRÉLÉES
-===============================================================================*/
-
-/* ----------------------:
-   Afficher les clients avec leur nombre total de commandes
-   - La sous-requête dépend de la ligne courante (CustomerID)
-   - Elle est réévaluée pour chaque client
-*/
-SELECT
-    *,
-    (
-        SELECT COUNT(*)
-        FROM  Orders o
-        WHERE o.CustomerID = c.CustomerID
-    ) AS TotalOrders
-FROM  Customers AS c;
-
-/* ==============================================================================
    SOUS-REQUÊTES | OPÉRATEUR EXISTS
 ===============================================================================*/
 
@@ -257,6 +181,17 @@ FROM  Customers AS c;
    Afficher les commandes des clients allemands
    ➜ EXISTS vérifie l’existence d’au moins une ligne correspondante
 */
+
+SELECT *
+FROM Orders
+WHERE CustomerID IN (
+    SELECT CustomerID
+    FROM Customers
+    WHERE Country = 'Germany'
+);
+
+
+-------Alternative
 SELECT
     *
 FROM  Orders AS o
@@ -267,6 +202,16 @@ WHERE EXISTS (
       AND c.CustomerID = o.CustomerID
 );
 
+
+SELECT
+    *
+FROM  Orders AS o
+WHERE EXISTS (
+    SELECT *
+    FROM  Customers AS c
+    WHERE c.Country = 'Germany'
+      AND c.CustomerID = o.CustomerID
+);
 /*---------------------- :
    Afficher les commandes des clients NON allemands
 */
