@@ -1,32 +1,48 @@
 /* ============================================================================== 
    SQL Aggregate Functions
--------------------------------------------------------------------------------
-   This document provides an overview of SQL aggregate functions, which allow 
-   performing calculations on multiple rows of data to generate summary results.
-
-   Table of Contents:
-     1. Basic Aggregate Functions
+   Basic Aggregate Functions
         - COUNT
         - SUM
         - AVG
         - MAX
         - MIN
-     2. Grouped Aggregations
-        - GROUP BY
+
 =================================================================================
 */
 
 /* ============================================================================== 
    BASIC AGGREGATE FUNCTIONS
 =============================================================================== */
+SELECT *  FROM customers;
 
 -- Find the total number of customers
 SELECT COUNT(*) AS total_customers
-FROM customers
+FROM customers;
 
+SELECT COUNT(customerid) AS total_customers
+FROM customers;
+
+SELECT COUNT(firstname ) AS total_customers
+FROM customers;
+
+SELECT COUNT(lastname  ) AS total_customers
+FROM customers;
+
+SELECT country, COUNT(*) AS total_customers
+FROM customers
+group by country;
+
+SELECT *  FROM orders;
 -- Find the total sales of all orders
 SELECT SUM(sales) AS total_sales
+FROM orders;
+
+SELECT orderstatus, SUM(sales) AS total_sales
 FROM orders
+
+SELECT orderstatus, SUM(sales) AS total_sales
+FROM orders
+group by orderstatus;
 
 -- Find the average sales of all orders
 SELECT AVG(sales) AS avg_sales
@@ -54,4 +70,3 @@ SELECT
     MIN(sales) AS lowest_sales
 FROM orders
 GROUP BY customerid
-
