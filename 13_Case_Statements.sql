@@ -66,3 +66,19 @@ SELECT
 FROM  Orders
 ;
 
+
+SELECT
+    CASE
+            WHEN sales > 30 THEN 1
+            ELSE 0
+        end as grop_orrder,
+    SUM(
+        CASE
+            WHEN sales > 30 THEN 1
+            ELSE 0
+        END
+    ) AS TotalOrdersHighSales,
+    COUNT(*) AS TotalOrders
+FROM  Orders
+GROUP BY grop_orrder;
+
