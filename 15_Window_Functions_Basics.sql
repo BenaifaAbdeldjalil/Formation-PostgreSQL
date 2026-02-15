@@ -35,6 +35,12 @@ SELECT
 FROM  Orders
 GROUP BY ProductID;
 
+--------------
+SELECT 
+    ProductID,
+    SUM(Sales) over() AS Total_Sales 
+FROM  Orders ;
+
 /* ==============================================================================
    FONCTIONS FENÊTRE SQL | CLAUSE OVER
 ===============================================================================*/
@@ -49,7 +55,7 @@ SELECT
     OrderDate,
     ProductID,
     Sales,
-    SUM(Sales) OVER () AS Total_Sales
+    SUM(Sales)
 FROM  Orders
  group by OrderID,
     OrderDate,
@@ -99,35 +105,6 @@ SELECT
     SUM(Sales) OVER (PARTITION BY ProductID, OrderStatus) AS Sales_By_Product_Status
 FROM  Orders;
 ---104
-
-/* ==============================================================================
-   FONCTIONS FENÊTRE SQL | CLAUSE ORDER
-===============================================================================*/
-
-/* Classer chaque commande selon le chiffre d'affaires (du plus élevé au plus bas)
-   La fonction RANK() avec ORDER BY permet de donner un rang à chaque ligne
-*/
-SELECT
-    OrderID,
-    OrderDate,
-    Sales,
-    RANK() OVER (ORDER BY Sales DESC) AS Rank_Sales
-FROM  Orders;
-------
-SELECT
-    OrderID,
-    OrderDate,
-    Sales,
-    RANK() OVER (ORDER BY ProductID DESC) AS Rank_Sales
-FROM  Orders;
-----
-SELECT
-    OrderID,
-    ProductID,
-    OrderDate,
-    Sales,
-    RANK() OVER (PARTITION by ProductID,OrderDate ORDER BY ProductID,OrderDate DESC) AS Rank_Sales
-FROM  Orders;
 
 /* ==============================================================================
    FONCTIONS FENÊTRE SQL | CLAUSE FRAME
@@ -230,5 +207,4 @@ SELECT
     Sales,
     SUM(SUM(Sales) OVER (PARTITION BY OrderStatus)) OVER (PARTITION BY OrderStatus) AS Total_Sales  -- ❌ Invalide
 FROM  Orders;
-
 
