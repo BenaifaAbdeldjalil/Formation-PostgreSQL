@@ -1,20 +1,15 @@
 /* =============================================================================
-   PostgreSQL Stored Function Demo
-   This script demonstrates:
-   1. Basic Function
-   2. Parameters
-   3. Multiple Queries
-   4. Variables
-   5. IF / ELSE Control Flow
-   6. Error Handling with EXCEPTION
+   PostgreSQL Stored Procedure Demo
+   Demonstrates:
+   - Parameters
+   - Variables
+   - Multiple Queries
+   - IF / ELSE
+   - Error Handling
 ============================================================================= */
 
--- =============================================================================
--- 1️⃣ Create Function with Parameter
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION get_customer_summary(p_country TEXT DEFAULT 'USA')
-RETURNS VOID
+CREATE OR REPLACE PROCEDURE get_customer_summary(p_country TEXT DEFAULT 'USA')
+LANGUAGE plpgsql
 AS $$
 DECLARE
     v_total_customers BIGINT;
@@ -81,13 +76,4 @@ EXCEPTION
         RAISE NOTICE 'An error occurred.';
         RAISE NOTICE 'Error Message: %', SQLERRM;
 END;
-$$ LANGUAGE plpgsql;
-
-
--- =============================================================================
--- Execute Function
--- =============================================================================
-
-SELECT get_customer_summary('Germany');
-SELECT get_customer_summary('USA');
-SELECT get_customer_summary();  -- Default value = 'USA'
+$$;
