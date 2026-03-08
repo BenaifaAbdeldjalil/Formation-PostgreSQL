@@ -1,3 +1,63 @@
+/* 
+DIFFERENCE ENTRE TABLE, VUE, VUE MATERIALISEE ET TABLE TEMPORAIRE
+
+TABLE              -> données permanentes
+VIEW               -> requête virtuelle
+MATERIALIZED VIEW  -> résultat stocké d'une requête
+TEMP TABLE         -> données temporaires pour un traitement
+
+1) TABLE
+- Stocke physiquement les données dans la base.
+- Les données sont permanentes.
+- On peut faire INSERT, UPDATE, DELETE.
+
+Syntaxe :
+CREATE TABLE nom_table (
+    colonne1 TYPE,
+    colonne2 TYPE
+);
+
+------------------------------------------------------------
+
+2) VIEW (VUE)
+- Ne stocke pas les données.
+- Contient seulement une requête SELECT.
+- Les données sont calculées à chaque appel.
+
+Syntaxe :
+CREATE VIEW nom_vue AS
+SELECT colonnes
+FROM table
+WHERE condition;
+
+------------------------------------------------------------
+
+3) MATERIALIZED VIEW (VUE MATERIALISEE)
+- Stocke le résultat de la requête comme une table.
+- Améliore les performances pour les requêtes lourdes.
+- Doit être rafraîchie pour mettre à jour les données.
+
+Syntaxe :
+CREATE MATERIALIZED VIEW nom_vue_mat AS
+SELECT colonnes
+FROM table;
+
+Actualisation :
+REFRESH MATERIALIZED VIEW nom_vue_mat;
+
+------------------------------------------------------------
+
+4) TABLE TEMPORAIRE
+- Table utilisée seulement pendant la session.
+- Les données sont supprimées automatiquement à la fin.
+
+Syntaxe :
+CREATE TEMP TABLE nom_table_temp (
+    colonne1 TYPE,
+    colonne2 TYPE
+);
+
+*/
 /* ==============================================================================
    VUES SQL (SQL VIEWS)
 -------------------------------------------------------------------------------
@@ -175,3 +235,4 @@ DROP MATERIALIZED VIEW IF EXISTS MV_Monthly_Summary;
  - Vue → données temps réel, simplicité
  - Vue matérialisée → performance, reporting
 */
+
