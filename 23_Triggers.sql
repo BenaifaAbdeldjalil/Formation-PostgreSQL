@@ -1,12 +1,22 @@
 /* =============================================================================
    TRIGGERS SQL AVEC POSTGRESQL
    -----------------------------------------------------------------------------
-   Objectif du script :
-   - Créer une table de journalisation (logs)
-   - Créer une fonction trigger (obligatoire en PostgreSQL)
-   - Créer un trigger AFTER INSERT sur la table  Employees
-   - Enregistrer automatiquement les informations des nouveaux employés
-     dans la table  EmployeeLogs
+2) TRIGGER
+
+- Un trigger est un programme qui s'exécute automatiquement.
+- Il se déclenche lors d'un événement sur une table :
+  INSERT, UPDATE ou DELETE.
+- Utilisé pour vérifier des règles ou enregistrer des modifications.
+
+Syntaxe :
+
+CREATE TRIGGER nom_trigger
+AFTER INSERT ON nom_table
+FOR EACH ROW
+BEGIN
+    instructions SQL
+END;
+
    =============================================================================
 */
 
@@ -106,3 +116,20 @@ FROM  formation_sql.employees;
 
 SELECT *
 FROM  formation_sql.EmployeeLogs;
+
+
+
+/*
+DIFFERENCE ENTRE PROCEDURE ET TRIGGER
+
+PROCEDURE
+- exécutée manuellement avec CALL
+- utilisée pour des traitements ou des opérations complexes
+
+TRIGGER
+- exécuté automatiquement
+- déclenché par un événement sur une table (INSERT, UPDATE, DELETE)
+
+*/
+
+
