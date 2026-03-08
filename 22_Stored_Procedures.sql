@@ -1,11 +1,24 @@
 /* =============================================================================
-   PostgreSQL Stored Procedure Demo
-   Demonstrates:
-   - Parameters
-   - Variables
-   - Multiple Queries
-   - IF / ELSE
-   - Error Handling
+
+DIFFERENCE ENTRE PROCEDURE ET TRIGGER
+
+1) PROCEDURE (STORED PROCEDURE)
+
+- Une procédure est un programme SQL stocké dans la base de données.
+- Elle est exécutée seulement quand on l'appelle explicitement.
+- Peut contenir plusieurs instructions SQL (SELECT, INSERT, UPDATE, etc.).
+- Peut recevoir des paramètres.
+
+Syntaxe :
+
+CREATE PROCEDURE nom_procedure()
+BEGIN
+    instructions SQL
+END;
+
+Exécution :
+
+CALL nom_procedure();
 ============================================================================= */
 
 CREATE OR REPLACE PROCEDURE get_customer_summary(p_country TEXT DEFAULT 'USA')
@@ -77,3 +90,4 @@ EXCEPTION
         RAISE NOTICE 'Error Message: %', SQLERRM;
 END;
 $$;
+
