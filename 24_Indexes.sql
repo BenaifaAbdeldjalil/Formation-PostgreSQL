@@ -101,70 +101,7 @@ FROM formation_sql.dbcustomers
 WHERE score > 500
   AND country = 'USA';
 
--- ============================================================================
--- RÈGLE DU PRÉFIXE GAUCHE (LEFTMOST PREFIX RULE)
--- ============================================================================
-/*
-   Pour un index défini sur (A, B, C) :
 
-   ✔ Utilisable par :
-     - A
-     - A + B
-     - A + B + C
 
-   ❌ Peu ou pas efficace pour :
-     - B seul
-     - C seul
-     - A + C
-
-   👉 Toujours placer la colonne la plus filtrante en premier.
-*/
--- ============================================================================
--- INDEX COLUMNSTORE (équivalent : index BRIN ou extensions)
--- ============================================================================
-
-/*
-   PostgreSQL ne propose PAS de columnstore natif comme SQL Server.
-   Alternatives :
-   - BRIN index (données volumineuses, analytiques)
-   - Extensions (cstore_fdw, timescaledb)
-*/
-
--- Exemple d’index BRIN (données volumineuses et ordonnées)
-CREATE INDEX idx_dbcustomers_score_brin
-ON formation_sql.dbcustomers
-USING BRIN (score);
-
--- ============================================================================
--- INDEX UNIQUES
--- ============================================================================
-
--- Tentative de création d’un index unique
--- Échoue si des doublons existent
-CREATE UNIQUE INDEX idx_products_category
-ON formation_sql.products (category);
-
--- Index unique garantissant l’unicité du produit
-CREATE UNIQUE INDEX idx_products_product
-ON formation_sql.products (product);
-
--- Test d’insertion (échouera si "Caps" existe déjà)
-INSERT INTO formation_sql.products (productid, product)
-VALUES (106, 'Caps');
-
--- ============================================================================
--- INDEX PARTIEL (Filtered Index)
--- ============================================================================
-
--- Requête ciblant uniquement les clients USA
-SELECT *
-FROM formation_sql.customers
-WHERE country = 'USA';
-
--- Index partiel : ne stocke QUE les lignes concernées
--- Très efficace pour des filtres fréquents
-CREATE INDEX idx_customers_country_usa
-ON formation_sql.customers (country)
-WHERE country = 'USA';
 
 
