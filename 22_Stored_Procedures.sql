@@ -1,93 +1,33 @@
-/* =============================================================================
+/* ==========================================================
+EXEMPLE SIMPLE DE PROCEDURE
 
-DIFFERENCE ENTRE PROCEDURE ET TRIGGER
+- Une procédure est un programme stocké dans la base.
+- Elle s’exécute seulement quand on l’appelle avec CALL.
+- Elle peut contenir plusieurs instructions SQL.
 
-1) PROCEDURE (STORED PROCEDURE)
+========================================================== */
 
-- Une procédure est un programme SQL stocké dans la base de données.
-- Elle est exécutée seulement quand on l'appelle explicitement.
-- Peut contenir plusieurs instructions SQL (SELECT, INSERT, UPDATE, etc.).
-- Peut recevoir des paramètres.
+/* ==========================================================
+EXEMPLE SIMPLE : PROCEDURE POUR AFFICHER LES CLIENTS
+========================================================== */
 
-Syntaxe :
-
-CREATE PROCEDURE nom_procedure()
-BEGIN
-    instructions SQL
-END;
-
-Exécution :
-
-CALL nom_procedure();
-============================================================================= */
-
-CREATE OR REPLACE PROCEDURE get_customer_summary(p_country TEXT DEFAULT 'USA')
+CREATE OR REPLACE PROCEDURE afficher_clients()
 LANGUAGE plpgsql
 AS $$
 DECLARE
-    v_total_customers BIGINT;
-    v_avg_score NUMERIC;
-    v_total_orders BIGINT;
-    v_total_sales NUMERIC;
+    v_id INT;
+    v_nom TEXT;
+    v_country TEXT;
 BEGIN
-
-    /* -------------------------------------------------------------------------
-       Data Preparation (IF / ELSE)
-    ------------------------------------------------------------------------- */
-    IF EXISTS (
-        SELECT 1
-        FROM sales.customers
-        WHERE score IS NULL
-        AND country = p_country
-    ) THEN
-        RAISE NOTICE 'Updating NULL scores to 0';
-        
-        UPDATE sales.customers
-        SET score = 0
-        WHERE score IS NULL
-        AND country = p_country;
-    ELSE
-        RAISE NOTICE 'No NULL scores found';
-    END IF;
-
-    /* -------------------------------------------------------------------------
-       Query 1: Customer Summary
-    ------------------------------------------------------------------------- */
-    SELECT
-        COUNT(*),
-        AVG(score)
-    INTO v_total_customers, v_avg_score
-    FROM sales.customers
-    WHERE country = p_country;
-
-    RAISE NOTICE 'Total Customers from %: %',
-        p_country, v_total_customers;
-
-    RAISE NOTICE 'Average Score from %: %',
-        p_country, v_avg_score;
-
-    /* -------------------------------------------------------------------------
-       Query 2: Orders Summary
-    ------------------------------------------------------------------------- */
-    SELECT
-        COUNT(o.orderid),
-        SUM(o.sales)
-    INTO v_total_orders, v_total_sales
-    FROM sales.orders o
-    JOIN sales.customers c
-        ON c.customerid = o.customerid
-    WHERE c.country = p_country;
-
-    RAISE NOTICE 'Total Orders from %: %',
-        p_country, v_total_orders;
-
-    RAISE NOTICE 'Total Sales from %: %',
-        p_country, v_total_sales;
-
-EXCEPTION
-    WHEN OTHERS THEN
-        RAISE NOTICE 'An error occurred.';
-        RAISE NOTICE 'Error Message: %', SQLERRM;
+    -- Boucle sur chaque client
+    FOR v_id, v_nom, v_country IN
+        SELECT customerid, firstname,country
+        FROM  customers
+    LOOP
+        RAISE NOTICE 'ID: %, Nom: %, Pays: %', v_id, v_nom, v_country;
+    END LOOP;
 END;
 $$;
 
+-- Exécution de la procédure
+CALL afficher_clients();
