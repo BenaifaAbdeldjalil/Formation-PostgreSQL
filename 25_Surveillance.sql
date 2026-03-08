@@ -1,83 +1,79 @@
--- ============================================================================
--- SURVEILLANCE DES INDEX
+/* ============================================================================
+   SURVEILLANCE DES TABLES ET COLONNES
+   ============================================================================
+   Ce script permet de :
+   1) Lister toutes les tables d’un schéma
+   2) Lister toutes les colonnes par table
+   3) Afficher quelques statistiques d’utilisation et de taille
+=========================================================================== */
+
+-- ============================================================================ 
+-- 1) LISTE DES TABLES D’UN SCHEMA
 -- ============================================================================
 
--- Liste des index d’une table
+SELECT 
+    table_schema,
+    table_name,
+    table_type
+FROM information_schema.tables
+WHERE table_schema = 'formation_sql'
+ORDER BY table_name;
+
+-- ============================================================================ 
+-- 2) LISTE DES COLONNES PAR TABLE
+-- ============================================================================
+
 SELECT
-    schemaname,
-    tablename,
-    indexname,
-    indexdef
-FROM pg_indexes
-WHERE tablename = 'dbcustomers';
+    table_schema,
+    table_name,
+    column_name,
+    data_type,
+    is_nullable,
+    column_default
+FROM information_schema.columns
+WHERE table_schema = 'formation_sql'
+ORDER BY table_name, ordinal_position;
 
--- ============================================================================
--- UTILISATION DES INDEX
--- ============================================================================
-
--- Statistiques d’utilisation des index
-SELECT
-    relname AS table_name,
-    indexrelname AS index_name,
-    idx_scan AS number_of_scans,
-    idx_tup_read AS tuples_read,
-    idx_tup_fetch AS tuples_fetched
-FROM pg_stat_user_indexes
-ORDER BY idx_scan DESC;
-
--- ============================================================================
--- INDEX MANQUANTS (équivalent logique)
+-- ============================================================================ 
+-- 3) STATISTIQUES D’UTILISATION DES TABLES
 -- ============================================================================
 
-/*
-   PostgreSQL ne fournit PAS de vue système pour les index manquants.
-   L’analyse se fait via :
-   - EXPLAIN / EXPLAIN ANALYZE
-   - Logs slow queries
-   - Extensions comme auto_explain
-*/
-
--- Exemple d’analyse de plan
-EXPLAIN ANALYZE
-SELECT *
-FROM formation_sql.customers
-WHERE country = 'USA';
-
--- ============================================================================
--- STATISTIQUES
--- ============================================================================
-
--- Consultation des statistiques
 SELECT
     relname AS table_name,
     n_live_tup AS live_rows,
     n_dead_tup AS dead_rows,
+    pg_size_pretty(pg_total_relation_size(relid)) AS total_size,
     last_analyze,
     last_autoanalyze
-FROM pg_stat_user_tables;
+FROM pg_stat_user_tables
+WHERE schemaname = 'formation_sql'
+ORDER BY n_live_tup DESC;
 
--- Mise à jour manuelle des statistiques
-ANALYZE formation_sql.dbcustomers;
-
+-- ============================================================================ 
+-- 4) TAILLE DES TABLES (détail par table et index)
 -- ============================================================================
--- FRAGMENTATION ET MAINTENANCE
+
+SELECT
+    schemaname,
+    relname AS table_name,
+    pg_size_pretty(pg_relation_size(relid)) AS table_size,
+    pg_size_pretty(pg_total_relation_size(relid)) AS total_size_including_indexes
+FROM pg_stat_user_tables
+WHERE schemaname = 'formation_sql'
+ORDER BY pg_total_relation_size(relid) DESC;
+
+-- ============================================================================ 
+-- 5) MAINTENANCE SIMPLIFIEE DES TABLES
 -- ============================================================================
 
-/*
-   PostgreSQL ne fragmente pas les index comme SQL Server,
-   mais les mises à jour génèrent des tuples morts.
-*/
-
--- Nettoyage léger (suppression des tuples morts)
+-- Nettoyage léger
 VACUUM formation_sql.dbcustomers;
 
 -- Nettoyage + recalcul des statistiques
 VACUUM ANALYZE formation_sql.dbcustomers;
 
--- Réécriture complète de la table et des index
--- (équivalent d’un REBUILD)
+-- Réécriture complète de la table (équivalent d’un REBUILD)
 VACUUM FULL formation_sql.dbcustomers;
 
 -- Regroupement physique selon un index (optionnel)
-CLUSTER formation_sql.dbcustomers
-USING idx_dbcustomers_country_score;
+-- CLUSTER formation_sql.dbcustomers USING idx_dbcustomers_country_score;
