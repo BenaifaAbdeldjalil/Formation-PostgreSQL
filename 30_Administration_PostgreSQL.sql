@@ -16,16 +16,14 @@
 -- Création d'un rôle avec mot de passe et droit de connexion
 CREATE ROLE utilisateur_sql LOGIN PASSWORD 'MotDePasse123';
 
--- Vérification du rôle
-\du utilisateur_sql
+
 
 /* ------------------------------------------------------------------------------ 
    2. Création d'un rôle sans droit de connexion (pour rôle de groupe)
 ------------------------------------------------------------------------------- */
 CREATE ROLE grp_finance NOLOGIN;
 
--- Vérification
-\du grp_finance
+
 
 /* ------------------------------------------------------------------------------ 
    3. Attribution d'un rôle à un autre rôle (groupes de rôles)
@@ -33,8 +31,7 @@ CREATE ROLE grp_finance NOLOGIN;
 -- Faire de "utilisateur_sql" un membre du groupe "grp_finance"
 GRANT grp_finance TO utilisateur_sql;
 
--- Vérification
-\du utilisateur_sql
+
 
 /* ------------------------------------------------------------------------------ 
    4. Attribution de privilèges
@@ -72,9 +69,6 @@ DROP ROLE IF EXISTS grp_finance;
 /* ------------------------------------------------------------------------------ 
    7. Gestion des extensions
 ------------------------------------------------------------------------------- */
--- Voir les extensions installées
-\dx
-
 -- Installer une extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
