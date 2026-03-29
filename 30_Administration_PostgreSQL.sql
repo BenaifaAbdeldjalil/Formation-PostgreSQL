@@ -1,103 +1,86 @@
 /* ==============================================================================
-   Administration PostgreSQL : Rôles et groupes (histoire pédagogique)
-   Objectif : expliquer clairement :
-   - rôle lecture,
-   - rôle lecture + écriture,
-   - rôle limité à une table,
-   - groupe de rôles
-   - ajouter un rôle dans un groupe.
+   Administration PostgreSQL – Rôles, groupes, CRUD et sécurité
+   Schéma : formation_sql_ai
 -------------------------------------------------------------------------------
-   Tout est basé sur le schéma formation_sql_ai créé précédemment.
+   Objectif pédagogique :
+   - créer un rôle de lecture (READ),
+   - un rôle lecture + écriture (READ + INSERT/UPDATE/DELETE),
+   - un rôle limité à une seule table (READ + INSERT),
+   - des groupes de rôles,
+   - ajouter un rôle à un groupe,
+   - puis révoquer des droits, modifier le mot de passe, et supprimer un rôle.
 ================================================================================= */
 
 
 
 /* ==============================================================================
-   Chapitre 1 — Rôle de lecture (seulement SELECT)
+   Chapitre 1 — Rôle de lecture (READ uniquement)
 =================================================================================
 
-   On commence par un rôle très simple : **lecture uniquement**.
-
-   Ce rôle sert, par exemple, à un analyste métier ou à un utilisateur de reporting :
-   - il peut lire les données,
-   - mais il ne peut ni insérer, ni modifier, ni supprimer.
-
+   On crée d’abord un rôle **lecture uniquement** sur `customers`.
 */
 
--- 1. Créer un rôle de lecture
+-- Créer un rôle qui peut se connecter
 CREATE ROLE role_lecture LOGIN PASSWORD 'lecture123';
 
--- 2. Lui donner uniquement le droit de lire une table
+-- Lui donner seulement SELECT
 GRANT SELECT ON TABLE formation_sql_ai.customers TO role_lecture;
 
 /* 
-   Ce rôle est un **rôle de lecture** :
-   - il peut exécuter des requêtes SELECT sur la table formation_sql_ai.customers,
-   - il ne peut pas faire :
-        INSERT, UPDATE, DELETE,
-   - il ne peut pas non plus modifier les autres tables.
+   Ce rôle :
+   - peut lire des données (READ),
+   - ne peut pas INSERT, UPDATE, DELETE.
 
-   C’est un rôle sécurisé, adapté à un utilisateur qui doit seulement consulter les données.
+   C’est un bon **rôle de reporting** ou **rôle de lecture métier**.
 */
 
 
 
 /* ==============================================================================
-   Chapitre 2 — Rôle de lecture + écriture (SELECT + INSERT/UPDATE/DELETE)
+   Chapitre 2 — Rôle lecture + écriture (READ + INSERT/UPDATE/DELETE)
 =================================================================================
 
-   Maintenant, on crée un rôle plus puissant : **lecture + écriture**.
-
-   Ce rôle est adapté à un développeur ou à un administrateur qui doit :
-   - lire les données,
-   - insérer, modifier ou supprimer des lignes.
-
+   On crée un rôle **avec CRUD complet** sur la même table.
 */
 
--- 1. Créer un rôle avec droit de connexion
-CREATE ROLE role_ecriture LOGIN PASSWORD 'ecriture456';
+-- Créer un rôle avec connexion
+CREATE ROLE role_crud LOGIN PASSWORD 'ecriture456';
 
--- 2. Lui donner lecture + écriture sur une même table
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE formation_sql_ai.customers TO role_ecriture;
+-- Donner CRUD : SELECT, INSERT, UPDATE, DELETE
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON TABLE formation_sql_ai.customers TO role_crud;
 
 /* 
-   Ce rôle est un **rôle lecture + écriture** :
-   - SELECT  → il peut lire les données,
-   - INSERT  → il peut ajouter des lignes,
-   - UPDATE  → il peut modifier des lignes,
-   - DELETE  → il peut supprimer des lignes.
+   Ce rôle couvre toutes les opérations CRUD :
+   - READ        = SELECT,
+   - CREATE      = INSERT,
+   - UPDATE      = UPDATE,
+   - DELETE      = DELETE,
 
-   Par rapport au rôle de lecture, il a simplement **plus de privilèges**,
-   mais il reste limité à la même table ou schéma (ici formation_sql_ai.customers).
+   C’est un bon profil **développeur** ou **admin de données**.
 */
 
 
 
 /* ==============================================================================
-   Chapitre 3 — Rôle limité à une seule table (table a seul)
+   Chapitre 3 — Rôle limité à une seule table (granularité)
 =================================================================================
 
-   Maintenant, on crée un rôle **spécialisé sur une seule table**,
-   par exemple une table de test ou une table de configuration.
-
+   On crée un rôle **spécialisé sur une seule table**, par exemple `table_a`.
 */
 
--- 1. Créer un rôle “testeur” limité à une table
+-- Rôle de test limité
 CREATE ROLE role_test_table_a LOGIN PASSWORD 'test_table_a';
 
--- 2. Lui donner accès uniquement à une table spécifique
+-- Droits très ciblés sur une seule table
 GRANT SELECT, INSERT ON TABLE formation_sql_ai.table_a TO role_test_table_a;
 
 /* 
-   Ce rôle est **spécialisé sur une seule table** :
-   - il peut lire (SELECT) et insérer (INSERT) dans table_a,
-   - mais il n’a pas de droits sur les autres tables (ex. customers, orders, product, etc.),
-   - c’est un bon exemple de **rôle de test** ou de **rôle de configuration**.
+   Ce rôle :
+   - peut lire et insérer dans `table_a`,
+   - n’a pas de droits sur `customers`, `orders`, etc.
 
-   Ici, la différence avec les rôles précédents est la **granularité** :
-   - rôle de lecture : lecture sur une table,
-   - rôle lecture + écriture : lecture + écriture sur une table,
-   - rôle sur une seule table : seulement SELECT et INSERT sur une table précise.
+   C’est un **rôle de test** ou **rôle de configuration**.
 */
 
 
@@ -106,86 +89,123 @@ GRANT SELECT, INSERT ON TABLE formation_sql_ai.table_a TO role_test_table_a;
    Chapitre 4 — Créer un groupe de rôles
 =================================================================================
 
-   Maintenant, on passe aux **groupes de rôles**. L’idée : regrouper les droits,
-   et les appliquer à plusieurs utilisateurs via un groupe.
-
-   Exemple : un groupe “grp_lecture” pour tous les utilisateurs qui doivent seulement lire.
-
+   On crée des **groupes de rôles** pour regrouper les droits.
 */
 
--- 1. Créer un groupe de rôles (sans droit de connexion)
+-- Groupe de lecture (ne peut pas se connecter)
 CREATE ROLE grp_lecture NOLOGIN;
-
--- 2. Attribuer des privilèges au groupe (lecture sur une table)
 GRANT SELECT ON TABLE formation_sql_ai.customers TO grp_lecture;
 
-/* 
-   Ce rôle est un **groupe de rôles** :
-   - il ne peut pas se connecter (NOLOGIN),
-   - il ne définit pas un utilisateur, mais un “ensemble de droits”,
-   - tous les rôles qui y appartiendront hériteront automatiquement de ces droits.
+-- Groupe de CRUD (écriture complète)
+CREATE ROLE grp_crud NOLOGIN;
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON TABLE formation_sql_ai.customers TO grp_crud;
 
-   Le **groupe de rôles** est un conteneur de privilèges :
-   - tu donnes les droits une fois au groupe,
-   - tu ajoutes plusieurs rôles dans ce groupe,
-   - tout le monde suit.
+/* 
+   Ces groupes servent de “conteneurs de droits” :
+   - NOLOGIN = ils ne sont pas des utilisateurs réels,
+   - les rôles membres héritent de leurs privilèges.
 */
 
 
 
 /* ==============================================================================
-   Chapitre 5 — Mettre un rôle dans un groupe de rôles
+   Chapitre 5 — Ajouter un rôle à un groupe
 =================================================================================
 
-   Maintenant, on relie un rôle existant à un groupe de rôles.
-   C’est ici que tout se connecte : tu ne répètes pas les droits, tu hérites.
-
+   On relie les rôles aux groupes.
 */
 
--- 1. Créer un rôle utilisateur (ex. un analyste)
+-- Créer un analyste et l’ajouter au groupe de lecture
 CREATE ROLE analyste_1 LOGIN PASSWORD 'analyste123';
-
--- 2. L’ajouter au groupe grp_lecture
 GRANT grp_lecture TO analyste_1;
+
+-- Créer un développeur et l’ajouter au groupe CRUD
+CREATE ROLE dev_1 LOGIN PASSWORD 'dev123';
+GRANT grp_crud TO dev_1;
 
 /* 
-   Ce que cela signifie :
-   - “analyse_1” devient **membre** du groupe grp_lecture,
-   - donc il hérite automatiquement de :
-        SELECT ON TABLE formation_sql_ai.customers
-   - sans que tu aies besoin de réécrire la commande GRANT SELECT.
+   Résultat :
+   - analyste_1 hérite de SELECT sur customers,
+   - dev_1 hérite de SELECT, INSERT, UPDATE, DELETE sur customers.
 
-   Tu peux imaginer d’autres groupes :
-   - grp_ecriture : pour tous les rôles qui ont SELECT, INSERT, UPDATE, DELETE,
-   - grp_test : pour les rôles qui ont des droits sur les tables de test.
-
-   Exemple :
-
--- Groupe pour la lecture
-CREATE ROLE grp_lecture NOLOGIN;
-GRANT SELECT ON TABLE formation_sql_ai.customers TO grp_lecture;
-
--- Groupe pour l’écriture
-CREATE ROLE grp_ecriture NOLOGIN;
-GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE formation_sql_ai.customers TO grp_ecriture;
-
--- Ajouter des rôles dans les groupes
-GRANT grp_lecture TO role_lecture;
-GRANT grp_lecture TO analyste_1;
-GRANT grp_ecriture TO role_ecriture;
-GRANT grp_ecriture TO developpeur_1;
-
+   Les droits sont gérés au niveau du groupe, pas dans chaque rôle.
 */
 
-/* 
-   En résumé :
-   - **rôle de lecture** : SELECT uniquement sur une table,
-   - **rôle lecture + écriture** : SELECT + INSERT/UPDATE/DELETE sur une table,
-   - **rôle limité à une table** : droits très ciblés sur une seule table,
-   - **groupe de rôles** : conteneur de droits sans connexion,
-   - **mettre un rôle dans un groupe** : fait hériter le rôle de tous les droits du groupe,
-     sans avoir à répéter les GRANT pour chaque utilisateur.
 
-   Tout cela reste basé sur le schéma formation_sql_ai que tu as créé au début,
-   et les mêmes règles de sécurité s’appliquent à tous les exercices suivants.
+
+/* ==============================================================================
+   Chapitre 6 — Révoquer des privilèges (REVOKE)
+=================================================================================
+
+   On peut maintenant retirer des droits.
+*/
+
+-- 1. Retirer UPDATE à dev_1 (garder READ + INSERT/DELETE)
+REVOKE UPDATE ON TABLE formation_sql_ai.customers FROM dev_1;
+
+-- 2. Retirer INSERT à role_test_table_a (garder SELECT seulement)
+REVOKE INSERT ON TABLE formation_sql_ai.table_a FROM role_test_table_a;
+
+/* 
+   Le `REVOKE` est l’inverse de `GRANT` :
+   - s’il n’y a pas de droit, REVOKE échoue proprement,
+   - il permet de raffiner le niveau de permissions.
+*/
+
+
+
+/* ==============================================================================
+   Chapitre 7 — Modifier le mot de passe (ALTER)
+=================================================================================
+
+   On peut changer le mot de passe d’un rôle sans toucher aux droits.
+*/
+
+ALTER ROLE role_lecture PASSWORD 'nouveau_lecture678';
+ALTER ROLE dev_1 PASSWORD 'nouveau_dev678';
+
+/* 
+   Cela est utile pour :
+   - appliquer une politique de rotation des mots de passe,
+   - corriger un mot de passe compromis.
+*/
+
+
+
+/* ==============================================================================
+   Chapitre 8 — Supprimer un rôle (DROP ROLE)
+=================================================================================
+
+   Quand un rôle n’est plus nécessaire, on le supprime.
+*/
+
+DROP ROLE IF EXISTS analyste_1;   -- Supprime le rôle utilisateur
+DROP ROLE IF EXISTS role_test_table_a;
+
+-- Supprimer un groupe de rôles (si plus utilisé)
+DROP ROLE IF EXISTS grp_lecture;
+
+/* 
+   Rappel :
+   - le rôle ne doit pas posséder d’objets (tables, bases, etc.),
+   - après suppression, le compte et ses droits disparaissent.
+*/
+
+
+
+/* ==============================================================================
+   Résumé synthétique : Rôles, CRUD, REVOKE, ALTER, DROP
+=================================================================================
+
+   - rôle de lecture : SELECT uniquement,
+   - rôle CRUD : SELECT, INSERT, UPDATE, DELETE,
+   - rôle limité : droits sur une seule table,
+   - groupe de rôles : conteneur NOLOGIN pour regrouper des droits,
+   - ajouter un rôle à un groupe : GRANT grp_lecture TO role_x,
+   - révoquer un droit : REVOKE privilège ON ... FROM role,
+   - modifier le mot de passe : ALTER ROLE role PASSWORD 'nouveau',
+   - supprimer un rôle : DROP ROLE role.
+
+   Tout repose sur le schéma `formation_sql_ai` et la logique de droits hiérarchique.
 */
