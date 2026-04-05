@@ -44,150 +44,104 @@
    Chapitre 2 — Analyse des ventes clients
 =============================================================================
 
-   Générer une requête SQL répondant à la question :
+   Objectif métier : identifier les clients les plus performants
 
-   “Quels sont les clients les plus performants sur les trois derniers mois ?”
+   - Quels sont les clients les plus performants sur les trois derniers mois ?
+   - Quels sont les produits les plus vendus par catégorie ?
+   - Quels clients ont généré le plus de ventes par pays ?
 
-   Contraintes :
-
-   - calcul du total des ventes par client
-   - retour des colonnes :
-        CustomerID, GivenName, LastName, Country
-        Total des ventes (Sales)
-        Score
-        Rang (RANK ou ROW_NUMBER)
-
-   - utilisation des tables :
-        Orders, Customers, Product
-   - jointures correctes
-   - filtre sur les 3 derniers mois
-
-   Fournir 3 versions :
-   - avec CTE
-   - sans CTE
-   - avec sous-requête
-
-   Ajouter une explication :
-   - lisibilité
-   - performance
-   - impact des index et du plan d’exécution
-
-   Toutes les requêtes utilisent les tables du Chapitre 1.
+   Tables utilisées : Orders, Customers, Product
 */
 
 
 /* =============================================================================
-   Chapitre 3 — Amélioration de la lisibilité
+   Chapitre 3 — Manipulation des données (INSERT / UPDATE / DELETE)
 =============================================================================
 
-   Améliorer la lisibilité de la requête du Chapitre 2 :
+   Objectif métier : gestion du catalogue et des commandes
 
-   - alignement des colonnes et alias
-   - chaque JOIN sur une nouvelle ligne
-   - structure claire et homogène
-
-   Simplifier :
-   - suppression des redondances
-   - suppression des CTE inutiles
-   - simplification des sous-requêtes
-
-   Ajouter des commentaires uniquement pour :
-   - filtres métier
-   - calculs importants
-   - fonctions analytiques
-
-   Fournir une explication des améliorations.
+   - Ajouter un nouveau client avec toutes les informations nécessaires
+   - Modifier le score d’un client existant
+   - Mettre à jour le statut d’une commande de “Pending” à “Shipped”
+   - Supprimer un client inactif depuis plus de 2 ans
+   - Archiver les commandes anciennes dans OrdersArchive
 */
 
 
 /* =============================================================================
-   Chapitre 4 — Optimisation des performances
+   Chapitre 4 — Fonctions SQL (texte, numérique, date)
 =============================================================================
 
-   Optimiser la requête précédente :
+   Objectif métier : transformer et analyser les données
 
-   - proposer des index :
-        CustomerID, OrderDate, ProductID
-   - proposer une réécriture si nécessaire
-   - suggérer :
-        partitionnement ou vues matérialisées (si pertinent)
-
-   Fournir :
-   - requête optimisée
-   - commentaires techniques
-
-   Expliquer :
-   - impact sur le plan d’exécution
-   - gains de performance attendus
-
-   Basé sur les mêmes tables du schéma formation_sql_ai.
+   - Mettre les noms de clients en majuscules ou concaténer prénom et nom
+   - Calculer le total des ventes et la moyenne des ventes par commande
+   - Calculer la différence entre OrderDate et ShipDate
+   - Regrouper les commandes par mois et par année
+   - Identifier les clients avec un score supérieur à la moyenne
 */
 
 
 /* =============================================================================
-   Chapitre 5 — Analyse du plan d’exécution
+   Chapitre 5 — Jointures (JOIN)
 =============================================================================
 
-   Analyser un plan d’exécution PostgreSQL :
+   Objectif métier : combiner les informations de plusieurs tables
 
-   - décrire les étapes :
-        Scan, Join, Sort, Aggregate
-   - identifier les problèmes :
-        Full Scan
-        Nested Loop inefficace
-        manque d’index
-
-   Proposer :
-   - améliorations
-   - index adaptés
-   - ajustements PostgreSQL (work_mem, etc.)
-
-   Basé sur les tables Orders et Customers.
+   - Quels clients ont passé des commandes et quels produits ont-ils achetés ?
+   - Quels employés sont responsables de quelles ventes ?
+   - Identifier les commandes sans correspondance dans Product ou Customers
+   - Lister toutes les commandes avec le nom du client et la catégorie du produit
 */
 
 
 /* =============================================================================
-   Chapitre 6 — Débogage SQL
+   Chapitre 6 — Sous-requêtes
 =============================================================================
 
-   Analyser une erreur SQL (ex : GROUP BY) :
+   Objectif métier : logique avancée et filtrage conditionnel
 
-   - expliquer le message
-   - identifier la cause :
-        colonne manquante dans GROUP BY
-        agrégation incorrecte
-        erreur analytique
-
-   Fournir :
-   - requête corrigée
-   - explication de la correction
-
-   Basé sur les tables du schéma formation_sql_ai.
+   - Quels clients ont passé des commandes supérieures à 500 € ?
+   - Quels produits n’ont jamais été commandés ?
+   - Quels clients ont un score supérieur à la moyenne globale ?
+   - Identifier les commandes avec un chiffre d’affaires supérieur à la moyenne
 */
 
 
 /* =============================================================================
-   Chapitre 7 — Compréhension d’une requête
+   Chapitre 7 — Fonctions analytiques
 =============================================================================
 
-   Expliquer une requête étape par étape :
+   Objectif métier : analyse avancée des ventes
 
-   - FROM
-   - JOIN
-   - WHERE
-   - GROUP BY
-   - HAVING
-   - SELECT
-   - ORDER BY
-
-   Décrire :
-   - transformation des données à chaque étape
-
-   Illustrer avec un exemple simple (2–3 lignes).
+   - Classement des clients par chiffre d’affaires
+   - Identifier la meilleure vente par client
+   - Comparer les ventes actuelles avec celles du mois précédent
+   - Calculer un rang de performance pour chaque client
 */
 
 
+/* =============================================================================
+   Chapitre 8 — Performance et optimisation
+=============================================================================
+
+   Objectif métier : améliorer la rapidité des requêtes
+
+   - Identifier les colonnes les plus utilisées dans les filtres
+   - Proposer des index pour accélérer les recherches
+   - Optimiser les requêtes sur Orders et Customers
+   - Vérifier l’impact des index sur le plan d’exécution
+*/
 
 
+/* =============================================================================
+   Chapitre 9 — Vues et simplification
+=============================================================================
 
+   Objectif métier : simplifier l’accès aux données
+
+   - Créer une vue des ventes par client
+   - Créer une vue des commandes par produit
+   - Lister les clients avec leurs ventes totales via une vue
+*/
 
